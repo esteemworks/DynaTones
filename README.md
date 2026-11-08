@@ -285,7 +285,8 @@ between light and dark underneath, checking that page and drop-down fields chang
 -NewerSetup <setup>` lets the installed version find the newer setup in a local feed and update itself. `-Setup <file>`
 installs that setup instead of the newest in `out\setup`, for example the last release's, to test the update users
 get. `-Test shots -Language de` draws the README pictures with the window in German.
- line: `--show`, `--autostart`, `--plan <file> [package]` (today's plan as text),
+
+Command line: `--show`, `--autostart`, `--plan <file> [package]` (today's plan as text),
 `--import-package <source> <file>` (imports an image package and writes what was suggested),
 `--gallery <file>` (the gallery's packages) and `--gallery-add <id> <file>` (adds one), `--next` (Next image in the running DynaTones),
 `--export <file.zip>` and `--import <file.zip>` (the settings, see "Your settings" above),
