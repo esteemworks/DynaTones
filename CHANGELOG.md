@@ -1,0 +1,179 @@
+# Changelog
+
+All notable changes to DynaTones. Downloads will be on the [releases page](../../releases) from the first release on.
+
+## 0.4.0
+
+### A new layout
+- Two tabs, **Background** and **Color mode**, instead of Today, Images, Color mode and Location. Background shows on
+  top what the desktop and the lock screen show now and next, with the day below it (the sun, light and dark, the
+  pictures in their order), then the way into **Desktop background** and **Lock and sign-in screen**, then your
+  packages. Location moved to the settings, where it is set up once
+- **Next image** on the desktop, in the tray menu and with `--next`: the coming picture now, and the day keeps one
+  step ahead until that picture's own time, so neither the next check nor the flowing transition brings the skipped
+  one back; **Back to the plan** undoes it. Kept over a restart of DynaTones
+- One picture at a time: a click on a picture opens when it begins (automatic, with the sun, at a clock time, or not
+  at all), with its hours today, in June and in December. The list of pictures no longer shows every switch at once
+- Lock screen as one choice: like the desktop, a package of its own, or like Windows. Windows spotlight goes off by
+  itself when DynaTones shows the pictures and comes back with "Like Windows"
+- **Pause** asks how long: an hour, until tomorrow morning, until you resume. **Update now** is a small icon (F5)
+- **Add package** has the gallery, a folder and a file in one menu; Esc goes one page back
+- With a package of its own for the lock screen, the day shows two strips: the desktop's pictures and below them the
+  lock screen's, each marked with its symbol; pointing at the day names both pictures
+- **Update now** turns its icon while it works, at least once, as StartQueue's Check
+- Settings hold only settings: General, Location, Updates, Backup, Troubleshooting, then About and More from
+  EsteemWorks. Where the pictures come from is a line under About instead of a card of its own
+- Location is one card: the source as four choices (Automatic, Windows, Fixed place, Time zone), the place in use,
+  and fields only for a fixed place, filled in with where DynaTones is when you choose it
+- The two cards on top of Background open the desktop's and the lock screen's pages; Next image sits with the day
+- Pages come at once: pictures are read off the window's thread, so going back after a change no longer stalls
+- A flowing transition no longer flashes on several monitors: each step is set for all monitors in one call, so
+  Windows draws it once
+- Color mode reads as a sentence: "Light from 30 minutes after sunrise", no negative numbers
+- Radio buttons and links in the app's color; the gallery in three columns
+- **Color mode** as one page: the day as a band with a handle at each switch, the two rules as sentences, and "What
+  changes along" as three cards (apps, taskbar and Start, mouse pointer), each with a picture of day and night
+- **Pointer packages**: a folder or `.zip` with `.cur` and `.ani` files (with or without an install.inf) becomes a
+  pointer scheme of your user
+- **Transitions** as four cards: at once, soft, gentle (new: three mixed steps in the last seconds) and flowing over
+  10, 30 or 60 minutes; a package can have its own
+- **Edit package**: name, description, transition, more details (other language, source, made with AI), add pictures,
+  drag them into another order, remove them with Undo, export as `.zip`; "New package of your own" in Add package
+- **Profiles** tab: profiles shared with the EsteemWorks apps (kit FamilyProfiles), each setting its own or taken over,
+  use now and back to the schedule, the week at a glance
+- **Settings**: Location with a small map (Natural Earth, public domain, built in), the place by name and today's sun;
+  About as one card with updates, backup and troubleshooting as rows
+- Less work for the PC during a flowing transition: the two pictures are made smaller once and kept as raw pixels
+  for its 30 steps instead of decoding the originals twice per step; a step takes about a third of the time it took,
+  runs on two cores at most and at low priority. The screen before signing in is worked out again only when its
+  pictures change
+- The screen before signing in: DynaTones' own picture there no longer reads as a rule of the organization, and
+  switching it off gives the device's own picture back
+- Places by name: the position in use reads "Near Melle" instead of coordinates, and a fixed place can be any of
+  about 32,000 places with at least 15,000 inhabitants (GeoNames, CC BY 4.0, built in; nothing is looked up online)
+- The screen before signing in can be set up from the app: **Set up** on the lock screen page asks for admin rights
+  once. Installations from before 0.2.0 that were only updated since never had it set up
+- "Use evening pictures in the morning" shows only where it does something
+- Pictures have names ("Blue hour") where the package brings them; the gallery's packages do
+
+### Start
+- At sign-in the color mode and the background come first: the tray icon, the family entry and the update check
+  wait until they are set, telling the other windows about the color mode no longer holds up the background, and a
+  flowing transition starts with the plain picture instead of waiting for its first mix. The log says how long it
+  took ("Applied at start in ... ms")
+
+## 0.3.1
+
+### Fixed
+- With the window open, a switch of the color mode of Windows (DynaTones itself switches it at sunrise and sunset)
+  left the page in the old mode while the drop-down fields took the new one: white drop-down fields on a dark page.
+  Page and fields now change together
+- The color mode chosen for the window (light or dark) was lost at every start; it is kept now
+
+## 0.3.0
+
+### Packages
+- **Ready from the first start**: the setup brings "Lakeside", a drawn lake in eight lights, and DynaTones shows it
+  when no package is chosen yet. Added once; deleted, it stays deleted
+- **Gallery** under Images: packages added with one click and already set up for the day. Ten places from night to
+  night (mountain lake, snowy village, autumn valley, lighthouse bay, little island, dunes, forest stream, forest
+  cabin, deer at the forest's edge, old town roofs) in photo style, 3D and flat 2D at 5120 x 2880, and three color
+  packages, Ember, Deep sea and Pastel, with twelve colors a day, one every two hours
+- The places were made with AI (SDXL 1.0, Real-ESRGAN) and are marked as such on every card, under Images and in the
+  settings under Pictures; the color packages and Lakeside are drawn
+- A package can bring its names in English and German, a description, its credits and its anchors in a
+  `dynatones.json`; DynaTones takes them over when it is imported
+- Every download from the gallery is checked against the SHA-256 in the list before it is added
+- New policy `PackageGallery`: a gallery of the organization's own on a share or web address, or `off`
+- `--gallery <file>` and `--gallery-add <id> <file>` from the command line
+
+### Privacy
+- About now names the gallery beside the update check as the only ways online; both only ask GitHub for files
+
+## 0.2.0
+
+### Background
+- Flowing transitions: before the next image starts, DynaTones mixes the two in small steps, about one a minute, so
+  the same place in other light changes slowly instead of jumping. **Settings > Background > Transition**: switch,
+  short fade, or flowing over 10, 30 (the default) or 60 minutes, never longer than the current image is shown. The
+  steps are made from the images at the size of the screens, kept only while needed, and stay on this PC
+
+### Your settings
+- A newer version takes the settings over, and the last five copies are kept under `backups` in the data folder,
+  made before every update, import or restore
+- **Settings > About > Backup and restore**: save the settings to a file, load them on another PC, or go back to an
+  earlier copy; `--export <file.zip>` and `--import <file.zip>` do the same from the command line
+- Settings that cannot be read are kept and shown under About, instead of being replaced without a word
+- The command line import of an image package is now `--import-package <source> <file>`
+
+### Updates
+- Looks for a new version on GitHub once a day, when the setup's box "look for updates" stays ticked; nothing about
+  you is sent. A new version shows in the tray and under **Settings > About > Updates**, installs with one click or,
+  if you switch it on, by itself, and DynaTones comes back quietly in the tray
+- The setup is checked against the SHA-256 digest of the release before it runs
+- Installations per device never update themselves; the policy `Updates` (off, notify, install) decides for organizations
+
+### Window
+- Rounded corners on Windows 11, like other windows (from the family's shared window frame)
+- Today fits the window without scrolling: the pictures of now and next take the height that is left and grow with
+  the window. Only a window smaller than about 800 px high scrolls
+
+### Lock screen
+- The lock screen can follow the day, with the desktop's images or a package of its own (Settings > Lock screen). Set
+  through Windows' own interface for the user's lock screen
+- Also the screen before signing in (Settings > Lock screen), with the installation with admin rights: the admin tier
+  sets up two tasks that set the device's lock screen picture, at start and whenever the picture changes. Windows takes
+  it over the next time the PC is locked or starts. The task checks every picture it is handed, and `--status` shows
+  what it set and when Windows took it over. Some editions of Windows leave that screen out; the setting then says
+  that Windows has not shown it. A policy "Also the screen before signing in"
+- Windows spotlight on the lock screen is switched off only when you ask, and comes back as it was when you switch the
+  option off again
+- A policy "Lock screen follows the day" for organizations
+
+### For organizations
+- Group Policy and Intune through ADMX templates (`--write-admx`), or any tool that writes the registry or
+  `policy.json`. Each setting can be fixed, greyed out with "Set by your organization", or given as a default users
+  can change
+- An image package from a folder the organization manages, imported again when it changes
+- Installation per device for all users: `/ALLUSERS` (silent, for the system context) or the choice in the setup;
+  Program Files, start at sign-in through the device's Run key, the event log included
+- With StartQueue installed, StartQueue starts DynaTones and the switch Start with Windows goes through it, so the two
+  no longer undo each other
+- The build signs the program, the setup and its uninstaller once a certificate is set up on the PC that builds
+- [docs/ADMIN.md](docs/ADMIN.md): silent installation, the templates in Group Policy and Intune, every policy with
+  its registry value, policy.json, event ids and support from the command line
+- Diagnostics mode and a diagnostics package under Settings, About, Troubleshooting; important events also in the
+  Windows event log once it is set up
+
+### Setup and the family
+- One setup that installs per user without admin rights and brings its own .NET; the admin option only adds the event
+  log. Uninstalling through Windows Settings removes start at sign-in and the program and keeps your packages
+- Tray icon with "Update now" and "Pause"; About with the version, privacy, "Made with AI" and the other EsteemWorks
+  apps
+
+### Calmer window
+- Settings open with the gear at the right end of the tabs instead of a tab of their own; Esc closes them
+- **Color mode**, as Windows calls it, instead of "light and dark"
+- Explanations sit behind an info sign; tooltips on every button, segment and field whose label alone does not say
+  what happens
+- Questions and messages appear inside the window; deleting a package can be undone for eight seconds
+- A scroll bar that stays visible on long pages, scrolling with the middle mouse button, F5 and Ctrl+N
+- No small caps line above the title, no dots between facts
+
+### Fixed
+- The empty date field on Today showed its hint in the language of Windows instead of the one chosen in DynaTones
+- What Auto found out about an image stayed in the language of the import; it is now kept in English and German and
+  shown in the language chosen. Packages imported before keep their old text until they are imported again
+
+## 0.1.0
+
+First version: dynamic wallpapers and the color mode from one calculation of the sun.
+
+- Every image has a place on the sun's arc, rising or setting, and stays until the next one starts
+- Auto places images from the time and place in a photo, from a WinDynamicDesktop theme or from how bright and warm
+  they look; anchors by hand to an elevation or a fixed time
+- Color mode by sunrise and sunset with offsets, fixed times, or following the image; apps, Windows and the mouse
+  pointer separately
+- Location from Windows, a place or coordinates entered, or the time zone; works on devices where Windows location is
+  switched off
+- Puts the wallpaper back when another tool replaces it, and catches up after sleep, unlock and a changed clock

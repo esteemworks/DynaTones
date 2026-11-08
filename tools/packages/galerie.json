@@ -1,0 +1,74 @@
+{
+  "_note": "The packages of the DynaTones gallery. 'source' is relative to --bilder (day series), --farbe (color packages) or the repository (Lakeside). Names and descriptions describe what the pictures show.",
+  "packages": [
+    {
+      "id": "lakeside", "source": "repo:assets/packages/lakeside", "anchors": "lakeside", "style": "drawn", "aiMade": false,
+      "name": "Lakeside", "nameDe": "Lakeside",
+      "description": "A lake under snow-capped mountains with a cabin and pines, drawn in eight lights from night to night.",
+      "descriptionDe": "Ein See unter verschneiten Bergen mit Hütte und Kiefern, gezeichnet in acht Lichtstimmungen von Nacht bis Nacht."
+    },
+    {
+      "id": "berge-foto", "source": "bilder:berge-foto/serie", "anchors": "tagesserie", "style": "photo", "aiMade": true,
+      "name": "Mountain lake", "nameDe": "Bergsee",
+      "description": "A calm lake with a boathouse below snowy peaks, the mountains glowing red in the evening.",
+      "descriptionDe": "Ein stiller See mit Bootshaus unter verschneiten Gipfeln, die am Abend rot glühen."
+    },
+    {
+      "id": "berge-3d", "source": "bilder:berge-3d/serie", "anchors": "tagesserie", "style": "3d", "aiMade": true,
+      "name": "Snowy village", "nameDe": "Winterdorf",
+      "description": "A miniature village with a church in deep snow; at night the windows light up.",
+      "descriptionDe": "Ein Miniaturdorf mit Kirche im tiefen Schnee; nachts leuchten die Fenster."
+    },
+    {
+      "id": "berge-2d", "source": "bilder:berge-2d/serie", "anchors": "tagesserie", "style": "2d", "aiMade": true,
+      "name": "Autumn valley", "nameDe": "Herbsttal",
+      "description": "Layered mountains above a lake with autumn trees, in flat paper-cut shapes.",
+      "descriptionDe": "Bergketten in Schichten über einem See mit Herbstbäumen, in flachen Papierschnitt-Formen."
+    },
+    {
+      "id": "meer-foto", "source": "bilder:meer-foto/serie", "anchors": "tagesserie", "style": "photo", "aiMade": true,
+      "name": "Lighthouse bay", "nameDe": "Leuchtturmbucht",
+      "description": "A rocky bay with a small lighthouse and a sandy beach, from the moonlit night to a red evening.",
+      "descriptionDe": "Eine Felsbucht mit kleinem Leuchtturm und Sandstrand, von der Mondnacht bis zum roten Abend."
+    },
+    {
+      "id": "meer-3d", "source": "bilder:meer-3d/serie", "anchors": "tagesserie", "style": "3d", "aiMade": true,
+      "name": "Little island", "nameDe": "Kleine Insel",
+      "description": "A small island with palm trees, a hut on stilts, a jetty and a sailboat; at night the lights come on.",
+      "descriptionDe": "Eine kleine Insel mit Palmen, einer Hütte auf Stelzen, einem Steg und einem Segelboot; nachts gehen die Lichter an."
+    },
+    {
+      "id": "meer-2d", "source": "bilder:meer-2d/serie", "anchors": "tagesserie", "style": "2d", "aiMade": true,
+      "name": "Dunes", "nameDe": "Dünen",
+      "description": "Dunes with beach grass and sailboats on a calm sea, in flat shapes and clear colors.",
+      "descriptionDe": "Dünen mit Strandgras und Segelbooten auf ruhiger See, in flachen Formen und klaren Farben."
+    },
+    {
+      "id": "wald-foto", "source": "bilder:wald-foto/serie", "anchors": "tagesserie", "style": "photo", "aiMade": true,
+      "name": "Forest stream", "nameDe": "Waldbach",
+      "description": "A stream between mossy stones in a misty forest, with rays of light through the trees.",
+      "descriptionDe": "Ein Bach zwischen bemoosten Steinen in einem nebligen Wald, mit Lichtstrahlen durch die Bäume."
+    },
+    {
+      "id": "wald-3d", "source": "bilder:wald-3d/serie", "anchors": "tagesserie", "style": "3d", "aiMade": true,
+      "name": "Forest cabin", "nameDe": "Waldhütte",
+      "description": "A wooden cabin by a pond among tall firs; in the evening the lights are on inside.",
+      "descriptionDe": "Eine Holzhütte an einem Teich zwischen hohen Tannen; am Abend brennt drinnen Licht."
+    },
+    {
+      "id": "wald-2d", "source": "bilder:wald-2d/serie", "anchors": "tagesserie", "style": "2d", "aiMade": true,
+      "name": "Deer at the forest's edge", "nameDe": "Hirsch am Waldrand",
+      "description": "A deer at the edge of a meadow before rolling hills, in flat paper-cut shapes.",
+      "descriptionDe": "Ein Hirsch am Rand einer Wiese vor sanften Hügeln, in flachen Papierschnitt-Formen."
+    },
+    {
+      "id": "stadt-foto", "source": "bilder:stadt-foto/serie", "anchors": "tagesserie", "style": "photo", "aiMade": true,
+      "name": "Old town roofs", "nameDe": "Altstadtdächer",
+      "description": "Tiled roofs, towers and domes of an invented old town, from the moonlit night to the blue hour.",
+      "descriptionDe": "Ziegeldächer, Türme und Kuppeln einer erfundenen Altstadt, von der Mondnacht bis zur blauen Stunde."
+    },
+    { "id": "glut", "source": "farbe:glut", "anchors": "manifest", "style": "color", "aiMade": false },
+    { "id": "tiefsee", "source": "farbe:tiefsee", "anchors": "manifest", "style": "color", "aiMade": false },
+    { "id": "pastell", "source": "farbe:pastell", "anchors": "manifest", "style": "color", "aiMade": false }
+  ]
+}

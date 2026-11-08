@@ -1,0 +1,9 @@
+out/
+bin/
+obj/
+*.user
+
+# Build leftovers
+*.exp
+*.lib
+*_wpftmp.csproj

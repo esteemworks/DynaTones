@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>DynaTones</AssemblyName>
+    <RootNamespace>DynaTones</RootNamespace>
+    <Version>0.4.0</Version>
+    <StartupObject>DynaTones.Program</StartupObject>
+    <Product>DynaTones</Product>
+    <AssemblyTitle>DynaTones</AssemblyTitle>
+    <Description>DynaTones</Description>
+    <Copyright>Leon Tüpker</Copyright>
+    <!-- WPF0001: ThemeMode (Fluent), WFO5001: WinForms color mode for the tray menu -->
+    <NoWarn>$(NoWarn);WPF0001;WFO5001</NoWarn>
+    <ApplicationIcon Condition="Exists('..\..\assets\DynaTones.ico')">..\..\assets\DynaTones.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <!-- The family's building blocks: from the kit's sources when its repository is next to this one, otherwise the
+       compiled package in kit\ (nuget.config). The kit is not open source; see kit\LICENSE.txt. -->
+  <PropertyGroup>
+    <EsteemWorksKitSource>$(MSBuildThisFileDirectory)..\..\..\EsteemWorks.Kit\src\EsteemWorks.Kit\EsteemWorks.Kit.csproj</EsteemWorksKitSource>
+  </PropertyGroup>
+  <Import Project="..\..\kit\EsteemWorks.Kit.props" Condition="Exists('..\..\kit\EsteemWorks.Kit.props')" />
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\zones.tab" LogicalName="DynaTones.zones.tab" />
+    <EmbeddedResource Include="Resources\cities.tsv.gz" LogicalName="DynaTones.cities.tsv.gz" />
+    <EmbeddedResource Include="Resources\worldmap.gz" LogicalName="DynaTones.worldmap.gz" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(EsteemWorksKitSource)" Condition="Exists('$(EsteemWorksKitSource)')" />
+    <PackageReference Include="EsteemWorks.Kit" Version="$(EsteemWorksKitVersion)" Condition="!Exists('$(EsteemWorksKitSource)')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DynaTones.Tests" />
+  </ItemGroup>
+
+</Project>

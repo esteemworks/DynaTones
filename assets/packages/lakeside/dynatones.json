@@ -1,0 +1,93 @@
+{
+  "name": "Lakeside",
+  "nameDe": "Lakeside",
+  "description": "A lake under snow-capped mountains with a cabin and pines, drawn in eight lights from night to night.",
+  "descriptionDe": "Ein See unter verschneiten Bergen mit Hütte und Kiefern, gezeichnet in acht Lichtstimmungen von Nacht bis Nacht.",
+  "credits": "Drawn by EsteemWorks",
+  "creditsDe": "Gezeichnet von EsteemWorks",
+  "aiMade": false,
+  "galleryId": "lakeside",
+  "mirrorEvening": false,
+  "images": [
+    {
+      "file": "1-night.jpg",
+      "title": "Night",
+      "titleDe": "Nacht",
+      "anchor": {
+        "mode": "sun",
+        "elevation": -30,
+        "rising": false
+      }
+    },
+    {
+      "file": "2-blue-hour.jpg",
+      "title": "Blue hour",
+      "titleDe": "Blaue Stunde",
+      "anchor": {
+        "mode": "sun",
+        "elevation": -6,
+        "rising": true
+      }
+    },
+    {
+      "file": "3-sunrise.jpg",
+      "title": "Sunrise",
+      "titleDe": "Sonnenaufgang",
+      "anchor": {
+        "mode": "sun",
+        "elevation": 0,
+        "rising": true
+      }
+    },
+    {
+      "file": "4-morning.jpg",
+      "title": "Morning",
+      "titleDe": "Morgen",
+      "anchor": {
+        "mode": "sun",
+        "elevation": 12,
+        "rising": true
+      }
+    },
+    {
+      "file": "5-noon.jpg",
+      "title": "Noon",
+      "titleDe": "Mittag",
+      "anchor": {
+        "mode": "sun",
+        "elevation": 25,
+        "rising": true
+      }
+    },
+    {
+      "file": "6-afternoon.jpg",
+      "title": "Afternoon",
+      "titleDe": "Nachmittag",
+      "anchor": {
+        "mode": "sun",
+        "elevation": 14,
+        "rising": false
+      }
+    },
+    {
+      "file": "7-sunset.jpg",
+      "title": "Sunset",
+      "titleDe": "Sonnenuntergang",
+      "anchor": {
+        "mode": "sun",
+        "elevation": 0,
+        "rising": false
+      }
+    },
+    {
+      "file": "8-dusk.jpg",
+      "title": "Dusk",
+      "titleDe": "Dämmerung",
+      "anchor": {
+        "mode": "sun",
+        "elevation": -6,
+        "rising": false
+      }
+    }
+  ]
+}

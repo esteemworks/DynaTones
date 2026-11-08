@@ -1,0 +1,13 @@
+EsteemWorks.Kit
+Copyright (c) 2026 Leon Tüpker. All rights reserved.
+
+This package is the compiled shared library of the EsteemWorks apps. It is not open source.
+
+You may use it, unchanged, only to build, run and test the EsteemWorks app in whose repository you found it, and you
+may pass it on only together with that app. Any other use, decompiling it to reuse its parts elsewhere, and
+publishing it on its own are not permitted.
+
+The app around it has its own license (see the app's LICENSE). That license does not extend to this package.
+
+THE PACKAGE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. IN NO EVENT SHALL THE AUTHOR BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM ITS USE.
