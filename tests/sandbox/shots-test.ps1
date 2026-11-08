@@ -1,6 +1,6 @@
 # Runs inside Windows Sandbox: the pictures for the README and the film, with demo data only. Installs DynaTones with
-# its setup (which brings the drawn package "Lakeside"), adds the drawn color package "Glut" for the lock screen, sets
-# Hamburg as the entered place, two sample profiles named by their times and the clock to a Tuesday afternoon, then
+# its setup (which brings the drawn package "Lakeside") in English or German (C:\dt\pkg\language.txt), adds the
+# drawn color package "Glut" for the lock screen, sets Hamburg as the entered place, two sample profiles named by their times and the clock to a Tuesday afternoon, then
 # lets DynaTones draw every page with --snapshot at four times the size (the README and the film show them at most at half of that), with the bounds of every element beside each picture. Nothing of this PC or its user is in the pictures.
 # run-sandbox.ps1 -Test shots maps a folder with this script (as test.ps1), SandboxKit.ps1, setup.exe, pkg\ (glut.zip)
 # and gal\ (the gallery) to C:\dt. The pictures go to C:\dt\results\shots.
@@ -12,6 +12,11 @@ foreach ($service in 'vmictimesync', 'w32time') {
     Stop-Service $service -Force -ErrorAction SilentlyContinue
     Set-Service $service -StartupType Disabled -ErrorAction SilentlyContinue
 }
+
+# The window's language, and Windows' formats with it: en for the README, de for the German website.
+$language = if ((Get-Content 'C:\dt\pkg\language.txt' -ErrorAction SilentlyContinue) -eq 'de') { 'de' } else { 'en' }
+if ($language -eq 'de') { Set-Culture de-DE }
+$names = @{ en = @('Weekend', 'Evenings'); de = @('Wochenende', 'Abends') }[$language]
 
 $exe = Install-App
 $data = "$env:APPDATA\DynaTones"
@@ -38,7 +43,7 @@ $pkg | ConvertTo-Json -Depth 10 | Set-Content $manifest -Encoding utf8
 $weekend = '3b1e6a52-0c8e-4f0a-9d1e-5a1f2c3d4e01'
 $evenings = '3b1e6a52-0c8e-4f0a-9d1e-5a1f2c3d4e02'
 @{
-    version = 1; language = 'en'
+    version = 1; language = $language
     location = @{ mode = 'coordinates'; latitude = 53.5511; longitude = 9.9937; placeName = 'Hamburg' }
     wallpaper = @{ enabled = $true; packageId = $lakeside; fit = 'fill'; fade = $true; blendMinutes = 30 }
     appearance = @{ enabled = $true; trigger = 'sun'; sunriseOffsetMinutes = 30; sunsetOffsetMinutes = -45; apps = 'switch'; system = 'switch' }
@@ -53,8 +58,8 @@ New-Item -ItemType Directory -Force "$env:APPDATA\EsteemWorks" | Out-Null
 @{
     version = 1
     profiles = @(
-        @{ id = $weekend; name = 'Weekend'; color = 'wald'; days = @('saturday', 'sunday'); from = ''; to = ''; outside = 'next'; shared = $true; apps = @('DynaTones', 'StartQueue') }
-        @{ id = $evenings; name = 'Evenings'; color = 'lavendel'; days = @(); from = '19:00'; to = '23:00'; outside = 'next'; shared = $false; apps = @('DynaTones') }
+        @{ id = $weekend; name = $names[0]; color = 'wald'; days = @('saturday', 'sunday'); from = ''; to = ''; outside = 'next'; shared = $true; apps = @('DynaTones', 'StartQueue') }
+        @{ id = $evenings; name = $names[1]; color = 'lavendel'; days = @(); from = '19:00'; to = '23:00'; outside = 'next'; shared = $false; apps = @('DynaTones') }
     )
     imported = @()
 } | ConvertTo-Json -Depth 6 | Set-Content "$env:APPDATA\EsteemWorks\profiles.json" -Encoding utf8
