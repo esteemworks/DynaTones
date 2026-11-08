@@ -35,9 +35,10 @@ Windows location is switched off, and it puts the wallpaper back when something 
 
 ## See it in action
 
-**[Watch the film](docs/video/DynaTones.mp4)** (104 s, sound on): outside the window the sun goes down, on the screen it is
-still noon. Then DynaTones: screen and window follow the same sun through a day, the slow blend from night to the blue
-hour, dark mode with the sunset, your own photos, the lock screen, a city where location is off, and templates for IT.
+**[Watch the film](https://esteemworks.github.io/dynatones/)** (1:44, plays in your browser, sound on): outside the window
+the sun goes down, on the screen it is still noon. Then DynaTones: screen and window follow the same sun through a day,
+the slow blend from night to the blue hour, dark mode with the sunset, your own photos, the lock screen, a city where
+location is off, and templates for IT.
 
 ## Highlights
 
