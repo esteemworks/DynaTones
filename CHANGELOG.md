@@ -2,6 +2,17 @@
 
 All notable changes to DynaTones. Downloads will be on the [releases page](../../releases) from the first release on.
 
+## Not released yet
+
+- **Switch to dark** or **light** in the tray and next to Next image: only the color mode, the picture stays, until
+  the plan comes to that mode by itself; from then on the day goes on as planned. Without DynaTones' color mode it
+  switches Windows' own, as Settings would
+- **Next dark** (or **light**) **phase, with its picture**: color mode and picture as they will be when the other mode
+  next begins, at once; at that moment the plan has caught up and goes on. **Back to the plan** undoes both
+- Next image and both of these show while paused too, and the pause keeps them; `--switch-mode` and `--jump-mode`
+  do the same from the command line
+- When a Next image ran out, a profile's settings stayed out until the next change; now they apply at once
+
 ## 0.4.0
 
 ### A new layout

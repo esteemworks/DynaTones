@@ -112,26 +112,89 @@ public sealed class DayEngine : IDisposable
         ConfigStore.Update(c => c.Wallpaper.SkipTo = next.Start);
         Log.Info($"Next image: {Package?.Images[next.Image].File ?? next.Image.ToString()} ahead of {next.Start:HH:mm}");
         Reload();
-        Resolve("next image");
+        Resolve("next image", byHand: true);
         return true;
     }
 
-    /// <summary>Back to the plan after "Next image".</summary>
+    /// <summary>Back to the plan after "Next image" or a color mode set by hand.</summary>
     public void BackToPlan()
     {
-        if (Config.Wallpaper.SkipTo == null) return;
-        ConfigStore.Update(c => c.Wallpaper.SkipTo = null);
+        if (Config.Wallpaper.SkipTo == null && Config.Appearance.Hold == null) return;
+        ConfigStore.Update(c =>
+        {
+            c.Wallpaper.SkipTo = null;
+            c.Appearance.Hold = null;
+        });
         Log.Info("Back to the plan");
         Reload();
-        Resolve("back to plan");
+        Resolve("back to plan", byHand: true);
     }
 
-    public void Resolve(string reason)
+    /// <summary>
+    /// "Switch to dark" or "light": the other color mode now, the background as it is, until the plan comes to that
+    /// mode by itself; from then on the day goes on as planned. Again while it is held: back to the plan's mode. When
+    /// DynaTones does not switch the color mode, it switches Windows' own, as Settings would.
+    /// </summary>
+    public void SwitchMode()
+    {
+        if (Plan?.ModeHeld == true)
+        {
+            ConfigStore.Update(c => c.Appearance.Hold = null);
+            Log.Info("Color mode back to the plan");
+        }
+        else if (Plan is { } plan && Schedule.SwitchMode(plan) is { } hold)
+        {
+            ConfigStore.Update(c => c.Appearance.Hold = hold);
+            Log.Info($"Color mode {(hold.Dark ? "dark" : "light")} by hand until {hold.Until:dd.MM. HH:mm}");
+        }
+        else
+        {
+            // Not DynaTones' to plan: Windows' own mode, apps and Windows together, as they are now for apps.
+            var light = !(Appearance.AppsLight ?? true);
+            if (!DryRun) Appearance.Apply(light, light);
+            Log.Info($"Windows color mode {(light ? "light" : "dark")} by hand");
+            Updated?.Invoke();
+            return;
+        }
+        Reload();
+        Resolve("color mode by hand", byHand: true);
+    }
+
+    /// <summary>
+    /// "Next dark (or light) phase": color mode and background as they will be when the plan next comes to the other
+    /// mode, now; both held until then, from then on the day goes on as planned. While a mode is held: back to the plan.
+    /// False when there is no such moment.
+    /// </summary>
+    public bool JumpToMode()
+    {
+        if (Plan?.ModeHeld == true)
+        {
+            BackToPlan();
+            return true;
+        }
+        if (Plan is not { } plan || Schedule.Jump(Config, Package, Position, plan) is not { } jump) return false;
+        var (hold, skipTo) = jump;
+        ConfigStore.Update(c =>
+        {
+            c.Appearance.Hold = hold;
+            c.Wallpaper.SkipTo = skipTo;
+        });
+        Log.Info($"Jump to {(hold.Dark ? "dark" : "light")} as at {hold.Until:dd.MM. HH:mm}" +
+                 (skipTo is { } at ? $", the image from {at:HH:mm} ahead of its time" : ", the image stays"));
+        Reload();
+        Resolve("jump to mode", byHand: true);
+        return true;
+    }
+
+    /// <param name="byHand">
+    /// Next image, a color mode or a jump chosen by the user: shown also while paused, and the pause then keeps it.
+    /// </param>
+    public void Resolve(string reason, bool byHand = false)
     {
         if (disposed) return;
         if (!dispatcher.CheckAccess())
         {
-            dispatcher.BeginInvoke(() => Resolve(reason));
+            dispatcher.BeginInvoke(() => Resolve(reason, byHand));
             return;
         }
 
@@ -146,15 +209,23 @@ public sealed class DayEngine : IDisposable
         if (Config.Wallpaper.SkipTo is { } skipTo && skipTo.AddMinutes(20) <= now)
         {
             ConfigStore.Update(c => c.Wallpaper.SkipTo = null);
-            Config = ConfigStore.Load();
+            Reload();
         }
         Problem = null;
         try
         {
             Plan = Schedule.Build(Config, Package, Position, now, lockPackage: LockPackage);
+            // A color mode set by hand ends when the plan has come to it by itself (or its time is long past): from
+            // then on the day goes on as planned.
+            if (Config.Appearance.Hold is { } hold && !Plan.ModeHeld)
+            {
+                ConfigStore.Update(c => c.Appearance.Hold = null);
+                Reload();
+                Log.Info($"Color mode {(hold.Dark ? "dark" : "light")} reached by the plan");
+            }
             Log.Debug($"Resolve ({reason}): image {Plan.Current?.Image.ToString() ?? "-"}, next {Plan.Next?.Start.ToString("dd.MM. HH:mm") ?? "-"}, dark {Plan.Dark?.ToString() ?? "-"}, position {Position?.Source.ToString() ?? "none"}", "Engine");
             var paused = Config.PausedUntil is { } until && until > now;
-            if (!paused && !DryRun)
+            if ((!paused || byHand) && !DryRun)
             {
                 // The color mode first: a registry value, on screen at once. Then the background, then the rest.
                 ApplyAppearance(reason);

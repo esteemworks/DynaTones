@@ -17,6 +17,10 @@ public sealed class Plan
     public Slot? Skipped { get; init; }
     /// <summary>Null when light and dark are not switched.</summary>
     public bool? Dark { get; init; }
+    /// <summary>The mode the plan itself has now; differs from <see cref="Dark"/> while <see cref="ModeHeld"/>.</summary>
+    public bool? PlannedDark { get; init; }
+    /// <summary>The mode was switched by hand and the plan has not come to it yet (<see cref="AppearanceSettings.Hold"/>).</summary>
+    public bool ModeHeld { get; init; }
     public DateTime? NextModeChange { get; init; }
     /// <summary>The lock screen: its package (the wallpaper's or its own) and the image now and next; null when off.</summary>
     public Package? LockPackage { get; init; }
@@ -100,7 +104,8 @@ public static class Schedule
 
         // Light and dark.
         var a = config.Appearance;
-        bool? dark = null;
+        bool? dark = null, planned = null;
+        var held = false;
         DateTime? nextMode = null;
         var todayModes = new List<(DateTime, bool)>();
         if (a.Enabled)
@@ -115,6 +120,13 @@ public static class Schedule
             events.Sort((x, y) => x.At.CompareTo(y.At));
             var last = events.LastOrDefault(e => e.At <= now);
             dark = last == default ? events.FirstOrDefault().Dark : last.Dark;
+            planned = dark;
+            // Set by hand: the other mode until the plan comes to it by itself.
+            if (a.Hold is { } hold && hold.Dark != dark && now < hold.Until.AddMinutes(20))
+            {
+                dark = hold.Dark;
+                held = true;
+            }
             // The next moment the mode really changes, skipping events that repeat the current one.
             var state = dark;
             foreach (var e in events.Where(e => e.At > now))
@@ -156,11 +168,46 @@ public static class Schedule
             Next = next,
             Skipped = skipped,
             Dark = dark,
+            PlannedDark = planned,
+            ModeHeld = held,
             NextModeChange = nextMode,
             TodayModes = todayModes,
             Blend = blend,
             BlendBegins = blendBegins,
         };
+    }
+
+    /// <summary>
+    /// "Switch to dark" or "light": the other mode now, held until the plan's next change of mode, which brings that
+    /// mode anyway. Null when the color mode is not switched by DynaTones or already held.
+    /// </summary>
+    public static ModeHold? SwitchMode(Plan plan) =>
+        plan.Dark is { } dark && !plan.ModeHeld
+            ? new ModeHold { Dark = !dark, Until = plan.NextModeChange ?? plan.At.AddDays(1) }
+            : null;
+
+    /// <summary>
+    /// "Next dark (or light) phase": the plan as it will be when it next comes to the other mode, at once: that mode,
+    /// held until then, and the picture that shows at that moment, ahead of its time like "Next image" (null when it is
+    /// the one showing now). Null when the color mode is not switched, already held or never changes.
+    /// </summary>
+    public static (ModeHold Hold, DateTime? SkipTo)? Jump(Config config, Package? package, Position? position, Plan plan, TimeZoneInfo? zone = null)
+    {
+        if (plan.Dark is not { } dark || plan.ModeHeld || plan.NextModeChange is not { } at) return null;
+        // The picture of that moment as planned, without a skip of "Next image".
+        var skip = config.Wallpaper.SkipTo;
+        config.Wallpaper.SkipTo = null;
+        Plan then;
+        try
+        {
+            then = Build(config, package, position, at, zone);
+        }
+        finally
+        {
+            config.Wallpaper.SkipTo = skip;
+        }
+        DateTime? skipTo = then.Current is { } slot && slot.Start > plan.At ? slot.Start : null;
+        return (new ModeHold { Dark = !dark, Until = at }, skipTo);
     }
 
     /// <summary>

@@ -127,6 +127,21 @@ public sealed class AppearanceSettings
     /// <summary>Name of a pointer scheme for light and for dark; null leaves the pointer alone.</summary>
     public string? CursorLight { get; set; }
     public string? CursorDark { get; set; }
+    /// <summary>
+    /// "Switch to dark" or "light" by hand: the other mode now, until the plan comes to it by itself; from then on the
+    /// day goes on as planned. Null: as planned.
+    /// </summary>
+    public ModeHold? Hold { get; set; }
+}
+
+/// <summary>
+/// The color mode set by hand: <see cref="Dark"/> while the plan says otherwise, until its next change of mode at
+/// <see cref="Until"/>. 20 minutes more allowed, as that moment moves a little when the position is refined.
+/// </summary>
+public sealed class ModeHold
+{
+    public bool Dark { get; set; }
+    public DateTime Until { get; set; }
 }
 
 // ---------- Image packages ----------

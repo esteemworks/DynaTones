@@ -198,6 +198,93 @@ public class PlanTests
     }
 
     [Fact]
+    public void A_mode_switched_by_hand_holds_until_the_plan_comes_to_it()
+    {
+        var noon = new DateTime(2026, 11, 5, 12, 0, 0);
+        var config = new Config();
+        var plan = Schedule.Build(config, null, Melle, noon, Berlin);
+        Assert.False(plan.Dark);
+        var hold = Schedule.SwitchMode(plan)!;
+        Assert.True(hold.Dark);
+        Assert.Equal(plan.NextModeChange, hold.Until);
+        config.Appearance.Hold = hold;
+
+        var held = Schedule.Build(config, null, Melle, noon.AddHours(1), Berlin);
+        Assert.True(held.Dark);
+        Assert.True(held.ModeHeld);
+        Assert.False(held.PlannedDark);
+        // The evening's change brings dark anyway: the next change worth waiting for is tomorrow's light.
+        Assert.True(held.NextModeChange > hold.Until.AddHours(10));
+        Assert.Null(Schedule.SwitchMode(held));
+
+        // From the planned change on it is the plan again, and the day goes on: light tomorrow morning.
+        var evening = Schedule.Build(config, null, Melle, hold.Until.AddMinutes(1), Berlin);
+        Assert.True(evening.Dark);
+        Assert.False(evening.ModeHeld);
+        var morning = Schedule.Build(config, null, Melle, new DateTime(2026, 11, 6, 10, 0, 0), Berlin);
+        Assert.False(morning.Dark);
+        Assert.False(morning.ModeHeld);
+    }
+
+    [Fact]
+    public void A_jump_shows_mode_and_image_of_the_next_change_of_mode()
+    {
+        var p = Package((ImageKind.Dawn, 0, 1), (ImageKind.Day, 0, 1), (ImageKind.Dusk, 0, 1), (ImageKind.Night, 0, 1));
+        var night = new DateTime(2026, 11, 5, 23, 0, 0);
+        var config = new Config();
+        var plan = Schedule.Build(config, p, Melle, night, Berlin);
+        Assert.True(plan.Dark);
+        var (hold, skipTo) = Schedule.Jump(config, p, Melle, plan, Berlin)!.Value;
+        Assert.False(hold.Dark);
+        Assert.Equal(plan.NextModeChange, hold.Until);
+        var then = Schedule.Build(config, p, Melle, hold.Until, Berlin);
+        Assert.NotEqual(plan.Current!.Image, then.Current!.Image);
+        Assert.Equal(then.Current.Start, skipTo);
+
+        config.Appearance.Hold = hold;
+        config.Wallpaper.SkipTo = skipTo;
+        var jumped = Schedule.Build(config, p, Melle, night, Berlin);
+        Assert.False(jumped.Dark);
+        Assert.True(jumped.ModeHeld);
+        Assert.Equal(then.Current.Image, jumped.Current!.Image);
+        // A held mode is left by "Back to the plan", not by a second jump.
+        Assert.Null(Schedule.Jump(config, p, Melle, jumped, Berlin));
+
+        // At the moment itself the plan has come there: light, the same image, nothing held, and on it goes.
+        var reached = Schedule.Build(config, p, Melle, hold.Until.AddMinutes(1), Berlin);
+        Assert.False(reached.Dark);
+        Assert.False(reached.ModeHeld);
+        Assert.Null(reached.Skipped);
+        Assert.Equal(then.Current.Image, reached.Current!.Image);
+    }
+
+    [Fact]
+    public void A_jump_keeps_the_image_when_it_still_shows_at_the_change()
+    {
+        // Light from 07:00, dark from 19:00; the day image shows until the evening image at 21:00.
+        var p = Package((ImageKind.Day, 0, 1), (ImageKind.Night, 0, 1));
+        p.Images[0].Anchor = new Anchor { Mode = AnchorMode.Time, Time = "06:00" };
+        p.Images[1].Anchor = new Anchor { Mode = AnchorMode.Time, Time = "21:00" };
+        var config = new Config();
+        config.Appearance.Trigger = AppearanceTrigger.Times;
+        var plan = Schedule.Build(config, p, Melle, new DateTime(2026, 11, 5, 12, 0, 0), Berlin);
+        var (hold, skipTo) = Schedule.Jump(config, p, Melle, plan, Berlin)!.Value;
+        Assert.True(hold.Dark);
+        Assert.Equal(new DateTime(2026, 11, 5, 19, 0, 0), hold.Until);
+        Assert.Null(skipTo);
+    }
+
+    [Fact]
+    public void Without_a_planned_color_mode_there_is_nothing_to_hold_or_jump_to()
+    {
+        var config = new Config();
+        config.Appearance.Enabled = false;
+        var plan = Schedule.Build(config, null, Melle, new DateTime(2026, 11, 5, 12, 0, 0), Berlin);
+        Assert.Null(Schedule.SwitchMode(plan));
+        Assert.Null(Schedule.Jump(config, null, Melle, plan, Berlin));
+    }
+
+    [Fact]
     public void A_skip_that_matches_no_coming_image_changes_nothing()
     {
         var p = Package((ImageKind.Dawn, 0, 1), (ImageKind.Day, 0, 1), (ImageKind.Dusk, 0, 1), (ImageKind.Night, 0, 1));

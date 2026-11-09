@@ -117,7 +117,7 @@ public static class Diagnostics
         if (plan.Skipped is { } skipped && pkg != null)
             sb.AppendLine($"Skipped    to {pkg.Images[skipped.Image].File} ahead of its time {skipped.Start:dd.MM. HH:mm}");
         if (plan.Blend is { } b) sb.AppendLine($"Blending   step {b.Step} of {b.Steps}, {b.Amount:P0} of the next, next step {b.NextStep:HH:mm:ss}");
-        sb.AppendLine($"Mode       {(plan.Dark is { } d ? d ? "dark" : "light" : "not switched")}, next change {Fmt(plan.NextModeChange)}");
+        sb.AppendLine($"Mode       {(plan.Dark is { } d ? d ? "dark" : "light" : "not switched")}{(plan.ModeHeld ? " by hand, the plan says " + (plan.PlannedDark == true ? "dark" : "light") : "")}, next change {Fmt(plan.NextModeChange)}");
         sb.AppendLine($"Lock image {(plan.LockCurrent is { } l && plan.LockPackage is { } lp ? lp.Images[l.Image].File + $" since {l.Start:dd.MM. HH:mm}" : "-")}");
         foreach (var (at, dark) in plan.TodayModes) sb.AppendLine($"  {at:HH:mm} {(dark ? "dark" : "light")}");
         return sb.ToString();

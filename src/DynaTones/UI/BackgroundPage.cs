@@ -115,7 +115,7 @@ public partial class MainWindow
         var plan = Engine.Plan;
         var c = Engine.Settings;
         return string.Join("|", page, plan?.Current?.Image, plan?.Current?.Start, plan?.Next?.Image, plan?.Next?.Start, plan?.Skipped?.Start,
-            plan?.LockCurrent?.Image, plan?.LockPackage?.Id, plan?.Dark, Engine.Problem, Engine.LockProblem, c.Wallpaper.PackageId,
+            plan?.LockCurrent?.Image, plan?.LockPackage?.Id, plan?.Dark, plan?.ModeHeld, plan?.NextModeChange, plan?.Dark == null ? Appearance.AppsLight : null, Engine.Problem, Engine.LockProblem, c.Wallpaper.PackageId,
             c.Wallpaper.Enabled, c.LockScreen.Enabled, c.LockScreen.Source, c.LockScreen.PackageId, c.LockScreen.SignIn, c.PausedUntil, previewDate,
             Packages.LoadAll().Count);
     }
@@ -162,23 +162,30 @@ public partial class MainWindow
             Dispatcher.BeginInvoke(BuildBackground);
         };
         var dateRow = Ui.Horizontal();
-        if (previewDate == null && c.Wallpaper.Enabled && Engine.Package != null && plan?.Current != null)
+        if (previewDate == null && plan != null)
         {
             var paused = c.PausedUntil is { } until && until > DateTime.Now;
-            if (plan.Skipped != null)
+            var pausedNote = paused ? Strings.T(" Paused: it stays like this until you resume.", " Pausiert: so bleibt es, bis du fortsetzt.") : "";
+            if (plan.Skipped != null || plan.ModeHeld)
             {
                 dateRow.Children.Add(Ui.Button(Strings.T("Back to the plan", "Zurück zum Plan"), (_, _) => Engine.BackToPlan(), "GhostButton")
-                    .Tip(Strings.T("The picture that belongs to this moment again.", "Wieder das Bild, das zu diesem Moment gehört.")));
+                    .Tip(Strings.T("The picture and the color mode that belong to this moment again.", "Wieder Bild und Farbmodus, die zu diesem Moment gehören.")));
                 dateRow.Children.Add(Ui.Spacer());
             }
-            var skip = Ui.Button(Strings.T("Next image", "Nächstes Bild"), (_, _) => Engine.SkipNext())
-                .Tip(paused ? Strings.T("Paused: resume first.", "Pausiert: erst fortsetzen.")
-                    : Strings.T("Shows the next image of the day now and keeps to it until its own time; then the day goes on as planned.",
-                        "Zeigt das nächste Bild des Tages sofort und bleibt dabei bis zu seiner eigenen Zeit; danach geht der Tag wie geplant weiter."));
-            skip.IsEnabled = plan.Next != null && !paused;
-            ToolTipService.SetShowOnDisabled(skip, true);
-            dateRow.Children.Add(skip);
-            dateRow.Children.Add(Ui.Spacer());
+            if (c.Wallpaper.Enabled && Engine.Package != null && plan.Current != null)
+            {
+                var skip = Ui.Button(Strings.T("Next image", "Nächstes Bild"), (_, _) => Engine.SkipNext())
+                    .Tip(Strings.T("Shows the next image of the day now and keeps to it until its own time; then the day goes on as planned.",
+                        "Zeigt das nächste Bild des Tages sofort und bleibt dabei bis zu seiner eigenen Zeit; danach geht der Tag wie geplant weiter.") + pausedNote);
+                skip.IsEnabled = plan.Next != null;
+                dateRow.Children.Add(skip);
+                dateRow.Children.Add(Ui.Spacer());
+            }
+            if (!plan.ModeHeld && ModeButton(plan, pausedNote) is { } mode)
+            {
+                dateRow.Children.Add(mode);
+                dateRow.Children.Add(Ui.Spacer());
+            }
         }
         dateRow.Children.Add(picker);
         if (previewDate != null)
@@ -1053,6 +1060,40 @@ public partial class MainWindow
             });
     }
 
+    /// <summary>
+    /// The color mode by hand, as in the tray: the other mode now, the picture as it is, or the whole next phase of the
+    /// other mode with its picture. Both hold until the plan comes there by itself; then the day goes on as planned.
+    /// Without DynaTones' color mode, one button that switches Windows' own.
+    /// </summary>
+    Button? ModeButton(Plan plan, string pausedNote)
+    {
+        var toDark = !(plan.Dark ?? Appearance.AppsLight == false);
+        var content = Ui.Horizontal(
+            new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = toDark ? "" : "", FontSize = 13, VerticalAlignment = VerticalAlignment.Center },
+            new TextBlock { Text = TrayHost.SwitchText(plan), Margin = new Thickness(8, 0, 0, 0) });
+        var button = new Button { Style = S("SecondaryButton"), Content = content };
+        Speak(button, TrayHost.SwitchText(plan));
+        if (plan.Dark == null)
+        {
+            button.Click += (_, _) => Engine.SwitchMode();
+            return button.Tip(Strings.T("Switches Windows' color mode for apps and Windows, as Settings would.",
+                "Schaltet den Farbmodus von Windows für Apps und Windows um, wie die Einstellungen."));
+        }
+        content.Children.Add(new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", FontSize = 10, Margin = new Thickness(8, 1, 0, 0), VerticalAlignment = VerticalAlignment.Center });
+        var phase = toDark ? Strings.T("dark", "dunkle") : Strings.T("light", "helle");
+        var entries = new List<(string, Action)>
+        {
+            (Strings.T("Only the color mode, the picture stays", "Nur den Farbmodus, das Bild bleibt"), Engine.SwitchMode),
+        };
+        if (plan.NextModeChange is { } at)
+            entries.Add((Strings.T($"The next {phase} phase with its picture, as at {Strings.Time(at)}", $"Die nächste {phase} Phase mit ihrem Bild, wie um {Strings.Time(at)}"),
+                () => Engine.JumpToMode()));
+        button.Click += (_, _) => ShowMenu(button, [.. entries]);
+        var until = plan.NextModeChange is { } next ? Strings.Time(next) : Strings.T("the next change", "zum nächsten Wechsel");
+        return button.Tip(Strings.T($"{(toDark ? "Dark" : "Light")} now, until the plan comes there by itself at {until}; then the day goes on as planned.",
+            $"{(toDark ? "Dunkel" : "Hell")} ab sofort, bis der Plan um {until} von selbst dahin kommt; danach geht der Tag wie geplant weiter.") + pausedNote);
+    }
+
     // ---------- Header line and dates ----------
 
     string Summary(bool paused)
@@ -1064,6 +1105,8 @@ public partial class MainWindow
         // A sentence, not a row of fragments: "Light mode, next change at 14:50".
         var parts = new List<string>();
         if (Engine.Plan?.Dark is { } dark) parts.Add(dark ? Strings.T("dark mode", "dunkler Modus") : Strings.T("light mode", "heller Modus"));
+        if (Engine.Plan?.ModeHeld == true && Engine.Settings.Appearance.Hold is { } hold)
+            parts[^1] += Strings.T($" by hand until {Strings.Time(hold.Until)}", $" von Hand bis {Strings.Time(hold.Until)}");
         if (Engine.Plan?.Blend is { } blend && Engine.Settings.Wallpaper.Enabled)
             parts.Add(Strings.T($"flowing into the next picture ({blend.Amount * 100:0} %)", $"geht ins nächste Bild über ({blend.Amount * 100:0} %)"));
         if (Engine.Plan?.NextAnnounced is { } next)

@@ -117,7 +117,10 @@ public partial class App : Application
         instance = new SingleInstance();
         if (!instance.IsFirst)
         {
-            SingleInstance.HandOver(mode switch { "--autostart" => "refresh", "--next" => "next", _ => "show" });
+            SingleInstance.HandOver(mode switch
+            {
+                "--autostart" => "refresh", "--next" => "next", "--switch-mode" => "switch-mode", "--jump-mode" => "jump-mode", _ => "show",
+            });
             Shutdown();
             return;
         }

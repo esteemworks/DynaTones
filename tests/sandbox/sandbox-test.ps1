@@ -184,6 +184,59 @@ Check '10-after-blend'
 $steps = @(Get-ChildItem "$data\blend" -Filter *.jpg -ErrorAction SilentlyContinue)
 Test-Check '10-after-blend: old steps removed' ($steps.Count -le 2) "$($steps.Count) step files left"
 
+# The color mode by hand (--switch-mode, as in the tray and the window): the other mode at once, the picture as it is,
+# held until the plan comes there by itself; from then on the plan again.
+function PlanMode($label) {
+    Run @('--plan', "`"$out\plan-$label.txt`"")
+    $text = Get-Content "$out\plan-$label.txt" -Raw
+    [pscustomobject]@{
+        Dark = $text -match 'Mode\s+dark'
+        ByHand = $text -match 'Mode\s+\w+ by hand'
+        Current = if ($text -match 'Current\s+(\S+\.jpg)') { $Matches[1] } else { '?' }
+        NextMode = if ($text -match 'Mode\s+[^\r\n]*next change (\d\d\.\d\d\. \d\d:\d\d)') { $Matches[1] } else { $null }
+    }
+}
+function At($text) { [datetime]::ParseExact("$text", 'dd.MM. HH:mm', [Globalization.CultureInfo]::InvariantCulture) }
+$before = PlanMode '11-before'
+Start-Process $exe -ArgumentList '--switch-mode' -Wait
+Start-Sleep 6
+Check '11-switched'
+$switched = PlanMode '11-switched'
+Test-Check '11-switched: the other mode, by hand, same picture' ($switched.Dark -ne $before.Dark -and $switched.ByHand -and $switched.Current -eq $before.Current) "before dark $($before.Dark), now dark $($switched.Dark), by hand $($switched.ByHand), picture $($before.Current) -> $($switched.Current)"
+$hold = (Get-Content "$data\config.json" -Raw | ConvertFrom-Json).appearance.hold
+SetClock ([datetime]$hold.until).AddMinutes(2)
+Start-Sleep 15
+Check '12-plan-reached'
+$reached = PlanMode '12-plan-reached'
+$left = (Get-Content "$data\config.json" -Raw | ConvertFrom-Json).appearance.hold
+Test-Check '12-plan-reached: the plan has that mode, nothing held' ($reached.Dark -eq $switched.Dark -and -not $reached.ByHand -and -not $left) "dark $($reached.Dark), by hand $($reached.ByHand), hold left $([bool]$left)"
+
+# The next phase of the other mode with its picture (--jump-mode): both as at that moment, at once; at that moment the
+# plan has come there and goes on.
+$before = PlanMode '13-before'
+Start-Process $exe -ArgumentList '--jump-mode' -Wait
+Start-Sleep 15
+Check '13-jumped'
+$jumped = PlanMode '13-jumped'
+Test-Check '13-jumped: the other mode by hand' ($jumped.Dark -ne $before.Dark -and $jumped.ByHand) "before dark $($before.Dark), now dark $($jumped.Dark), by hand $($jumped.ByHand)"
+SetClock (At $before.NextMode).AddMinutes(2)
+Start-Sleep 15
+Check '14-jump-reached'
+$there = PlanMode '14-jump-reached'
+Test-Check '14-jump-reached: same mode and picture as the jump, by plan' ($there.Dark -eq $jumped.Dark -and $there.Current -eq $jumped.Current -and -not $there.ByHand) "dark $($there.Dark), picture $($jumped.Current) -> $($there.Current), by hand $($there.ByHand)"
+
+# Paused: a switch by hand still shows, and the pause keeps it.
+Config { param($c) $c | Add-Member -NotePropertyName pausedUntil -NotePropertyValue '9999-12-31T00:00:00' -Force }
+Start-Sleep 5
+$before = PlanMode '15-before'
+Start-Process $exe -ArgumentList '--switch-mode' -Wait
+Start-Sleep 6
+Check '15-paused-switch'
+$paused = PlanMode '15-paused-switch'
+Test-Check '15-paused-switch: switched although paused' ($paused.Dark -ne $before.Dark) "before dark $($before.Dark), now dark $($paused.Dark)"
+Config { param($c) $c | Add-Member -NotePropertyName pausedUntil -NotePropertyValue $null -Force; $c.appearance | Add-Member -NotePropertyName hold -NotePropertyValue $null -Force }
+Start-Sleep 8
+
 # The window, drawn off screen, with the about cards at the end of the settings.
 Save-Snapshot $exe
 Copy-Item "$data\config.json" "$out\config-end.json" -ErrorAction SilentlyContinue

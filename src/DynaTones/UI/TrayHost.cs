@@ -9,6 +9,7 @@ public sealed class TrayHost : IDisposable
 {
     readonly KitTray? tray;
     readonly Ipc.Server? server;
+    readonly System.Windows.Forms.ToolStripMenuItem? switchItem, jumpItem;
     public DayEngine Engine { get; }
     MainWindow? window;
 
@@ -34,11 +35,15 @@ public sealed class TrayHost : IDisposable
                 Engine.Resolve("request");
             });
             tray.Add(Strings.T("Next image", "Nächstes Bild"), () => Engine.SkipNext());
+            // The color mode: the other one now, or the whole next phase with its image; the words follow the mode.
+            switchItem = tray.Add(Strings.T("Switch to dark", "Auf Dunkel umschalten"), () => Engine.SwitchMode());
+            jumpItem = tray.Add(Strings.T("Next dark phase, with its picture", "Nächste dunkle Phase, mit Bild"), () => Engine.JumpToMode());
             tray.AddMenu(Strings.T("Pause", "Pausieren"),
                 (Strings.T("For an hour", "Für eine Stunde"), () => Pause(DateTime.Now.AddHours(1))),
                 (Strings.T("Until tomorrow morning", "Bis morgen früh"), () => Pause(TomorrowMorning)),
                 (Strings.T("Until I resume", "Bis ich fortsetze"), () => Pause(Forever)),
                 (Strings.T("Resume", "Fortsetzen"), () => Pause(null)));
+            UpdateTray();
             server = new Ipc.Server(message => Application.Current.Dispatcher.BeginInvoke(() => Handle(message)));
             // After an import or restore under About, "Backup and restore".
             KitSettings.Reload = () =>
@@ -66,6 +71,14 @@ public sealed class TrayHost : IDisposable
             // From a sibling (StartQueue) or a second start with --next: the next image of the day now.
             case "next":
                 Engine.SkipNext();
+                break;
+            // --switch-mode: the other color mode until the plan comes there; --jump-mode: the next phase of the other
+            // mode with its picture (again: back to the plan).
+            case "switch-mode":
+                Engine.SwitchMode();
+                break;
+            case "jump-mode":
+                Engine.JumpToMode();
                 break;
             // Sent by --import from the command line, after the settings were replaced.
             case KitSettings.ReloadMessage:
@@ -107,9 +120,28 @@ public sealed class TrayHost : IDisposable
 
     void UpdateTray()
     {
-        if (tray != null)
-            tray.Status = Engine.Plan?.NextAnnounced is { } next ? Strings.T("Next change at ", "Nächster Wechsel um ") + Strings.Time(next) : "";
+        if (tray == null) return;
+        tray.Status = Engine.Plan?.NextAnnounced is { } next ? Strings.T("Next change at ", "Nächster Wechsel um ") + Strings.Time(next) : "";
+        var plan = Engine.Plan;
+        if (switchItem != null) switchItem.Text = SwitchText(plan);
+        if (jumpItem != null)
+        {
+            jumpItem.Text = JumpText(plan);
+            jumpItem.Visible = plan?.Dark != null && (plan.ModeHeld || plan.NextModeChange != null);
+        }
     }
+
+    /// <summary>"Switch to dark" or "light": the mode not shown now; without DynaTones' color mode, Windows' own.</summary>
+    public static string SwitchText(Plan? plan) =>
+        (plan?.Dark ?? Appearance.AppsLight == false)
+            ? Strings.T("Switch to light", "Auf Hell umschalten")
+            : Strings.T("Switch to dark", "Auf Dunkel umschalten");
+
+    /// <summary>The next phase of the other mode with its image, or back to the plan while a mode is held.</summary>
+    public static string JumpText(Plan? plan) =>
+        plan?.ModeHeld == true ? Strings.T("Back to the plan", "Zurück zum Plan")
+        : plan?.Dark == true ? Strings.T("Next light phase, with its picture", "Nächste helle Phase, mit Bild")
+        : Strings.T("Next dark phase, with its picture", "Nächste dunkle Phase, mit Bild");
 
     public void Dispose()
     {
