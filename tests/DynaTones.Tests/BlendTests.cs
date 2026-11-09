@@ -43,7 +43,7 @@ public class BlendTests
     }
 
     [Fact]
-    public void The_plan_mixes_only_with_fade_and_different_images()
+    public void The_plan_mixes_different_images_also_when_at_once_was_saved()
     {
         var p = new Package { Name = "Test", Folder = "x" };
         foreach (var (kind, i) in new[] { (ImageKind.Dawn, 0), (ImageKind.Day, 0), (ImageKind.Dusk, 0), (ImageKind.Night, 0) })
@@ -63,8 +63,9 @@ public class BlendTests
         Assert.Equal((probe.Current!.Image, probe.Next.Image), (plan.Blend!.From, plan.Blend.To));
         Assert.Equal(plan.Blend.NextStep, plan.NextChange);
 
+        // "At once" (Fade off) is no longer offered; saved from an older version it fades all the same.
         config.Wallpaper.Fade = false;
-        Assert.Null(Schedule.Build(config, p, melle, at, zone).Blend);
+        Assert.NotNull(Schedule.Build(config, p, melle, at, zone).Blend);
     }
 
     [Fact]

@@ -52,6 +52,22 @@ public class SettingsTests : IDisposable
         Assert.Equal(-45, config.Appearance.SunsetOffsetMinutes);
         Assert.True(config.LockScreen.Enabled);
         Assert.Null(KitSettings.Problem);
+        // Saved before there was a choice of accent: the default, the color of the profile the window shows.
+        Assert.Equal(AccentChoice.Shown, config.Accent);
+    }
+
+    [Fact]
+    public void The_accent_is_kept_as_chosen()
+    {
+        File.Copy(Fixture("config-v1.json"), Paths.Config);
+        KitSettings.Configure(Config.Schema, ["config.json"]);
+        foreach (var accent in new[] { AccentChoice.Brand, AccentChoice.Windows, AccentChoice.Sand, AccentChoice.Shown })
+        {
+            ConfigStore.Update(c => c.Accent = accent);
+            Assert.Equal(accent, ConfigStore.Load().Accent);
+        }
+        // The rest of the old settings stays as it was.
+        Assert.Equal("Hamburg", ConfigStore.Load().Location.PlaceName);
     }
 
     [Fact]

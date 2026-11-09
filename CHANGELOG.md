@@ -2,6 +2,16 @@
 
 All notable changes to DynaTones. Downloads will be on the [releases page](../../releases) from the first release on.
 
+## Not released yet
+
+- **Every change of picture fades.** DynaTones mixes three frames between the two pictures and shows them over about a
+  second, also for Next image, the jump to the next light or dark phase and Back to the plan. Windows' own fade could
+  not be relied on: it depends on Windows' animation settings and did not show at all in Windows Sandbox. The color
+  mode changes halfway through the fade, not before it
+- **At once** is gone: where it was set (the desktop, a package, a profile), Soft takes its place
+- **Accent color** in Settings, General: DynaTones, Profile (the default: the color of the profile that applies, or of
+  the one being edited), Windows, or Sand, the family's quiet beige
+
 ## 0.5.0
 
 - **Switch to dark** or **light** in the tray and next to Next image: only the color mode, the picture stays, until

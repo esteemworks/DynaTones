@@ -126,19 +126,20 @@ public partial class MainWindow
         var apps = ChangeCard(cards, Strings.T("Apps", "Apps"),
             Strings.T("Explorer, Settings and every app that follows the Windows color mode.", "Explorer, Einstellungen und alle Apps, die dem Farbmodus von Windows folgen."));
         apps.Children.Add(Pair(AppWindow(Light(a.Apps, true, Appearance.AppsLight), true), AppWindow(Light(a.Apps, false, Appearance.AppsLight), false)));
-        apps.Children.Add(Fill(Locked(Ui.Choice(targets, a.Apps, t => ChangeAndRebuild(c => c.Appearance.Apps = t, BuildModePage), 200, targetTips), Policies.AppsColorMode)));
+        var appsChoice = Ui.Choice(targets, a.Apps, t => ChangeAndRebuild(c => c.Appearance.Apps = t, BuildModePage), 200, targetTips);
+        Speak(appsChoice, Strings.T("Apps", "Apps"));
+        apps.Children.Add(Fill(Locked(appsChoice, Policies.AppsColorMode)));
 
         var system = ChangeCard(cards, Strings.T("Taskbar and Start", "Taskleiste und Start"),
             Strings.T("Taskbar, Start, notifications. Some like Windows dark with light apps.", "Taskleiste, Start, Benachrichtigungen. Manche mögen Windows dunkel mit hellen Apps."));
         system.Children.Add(Pair(Taskbar(Light(a.System, true, Appearance.SystemLight), true), Taskbar(Light(a.System, false, Appearance.SystemLight), false)));
-        system.Children.Add(Fill(Locked(Ui.Choice(targets, a.System, t => ChangeAndRebuild(c => c.Appearance.System = t, BuildModePage), 200, targetTips), Policies.WindowsColorMode)));
+        var systemChoice = Ui.Choice(targets, a.System, t => ChangeAndRebuild(c => c.Appearance.System = t, BuildModePage), 200, targetTips);
+        Speak(systemChoice, Strings.T("Taskbar and Start", "Taskleiste und Start"));
+        system.Children.Add(Fill(Locked(systemChoice, Policies.WindowsColorMode)));
 
         var pointer = ChangeCard(cards, Strings.T("Mouse pointer", "Mauszeiger"),
             Strings.T("A pointer scheme for the day and one for the night, from the schemes in Windows and the pointer packages you add.",
-                "Ein Zeigerschema für den Tag und eines für die Nacht, aus den Schemata von Windows und den Zeigerpaketen, die du hinzufügst."),
-            Ui.Button(Strings.T("Add pointer package", "Zeigerpaket hinzufügen"), (_, _) => AddPointerPackage(), "GhostButton")
-                .Tip(Strings.T("A folder or a .zip with an install.inf or .cur and .ani files. Stays with your user, no admin rights.",
-                    "Ein Ordner oder eine .zip mit install.inf oder .cur- und .ani-Dateien. Bleibt bei deinem Benutzer, ohne Adminrechte.")));
+                "Ein Zeigerschema für den Tag und eines für die Nacht, aus den Schemata von Windows und den Zeigerpaketen, die du hinzufügst."));
         pointer.Children.Add(Pair(PointerPreview(a.CursorLight, true), PointerPreview(a.CursorDark, false)));
         var schemes = new List<(string?, string)> { (null, Strings.T("Leave alone", "Nicht anfassen")) };
         schemes.AddRange(Appearance.CursorSchemes().Select(s => ((string?)s, s)));
@@ -152,6 +153,14 @@ public partial class MainWindow
         choices.Children.Add(day);
         choices.Children.Add(night);
         pointer.Children.Add(choices);
+        // Below the two choices, not in the card's head: there Tab reached it after the cards beside it and jumped up
+        // the page (Test-DevAccessibility, 09.11.2026).
+        var add = Ui.Button(Strings.T("Add pointer package", "Zeigerpaket hinzufügen"), (_, _) => AddPointerPackage(), "GhostButton")
+            .Tip(Strings.T("A folder or a .zip with an install.inf or .cur and .ani files. Stays with your user, no admin rights.",
+                "Ein Ordner oder eine .zip mit install.inf oder .cur- und .ani-Dateien. Bleibt bei deinem Benutzer, ohne Adminrechte."));
+        add.HorizontalAlignment = HorizontalAlignment.Left;
+        add.Margin = new Thickness(0, 8, 0, 0);
+        pointer.Children.Add(add);
     }
 
     static string Minutes(int minutes) => new TimeOnly(((minutes % 1440) + 1440) % 1440 / 60, ((minutes % 1440) + 1440) % 1440 % 60).ToString("HH:mm", CultureInfo.InvariantCulture);

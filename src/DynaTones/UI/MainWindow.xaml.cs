@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -36,7 +36,20 @@ public partial class MainWindow : Window
         BuildBackground();
         Engine.Updated += RefreshBackground;
         Closed += (_, _) => Engine.Updated -= RefreshBackground;
+        Engine.Updated += ShowProfileColor;
+        Closed += (_, _) => Engine.Updated -= ShowProfileColor;
+        ShowProfileColor();
         RefreshBackground();
+    }
+
+    /// <summary>
+    /// With the accent "Profile", the window takes on the color of the profile it shows: the one being edited, else
+    /// the one that applies now; without a profile DynaTones' own (STANDARD, "Appearance follows the profile").
+    /// </summary>
+    void ShowProfileColor()
+    {
+        var profile = editingProfile && shownProfile is { } id ? FamilyProfiles.Find(id) : Engine.ActiveProfile;
+        Theme.Show(profile == null ? null : FamilyProfiles.ColorOf(FamilyProfiles.Current.Profiles, profile));
     }
 
     /// <summary>The pages, for the snapshot.</summary>
@@ -639,8 +652,14 @@ public partial class MainWindow : Window
         }, config.WindowTheme, t =>
         {
             Change(c => c.WindowTheme = t);
-            Theme.Apply(t, AccentChoice.Brand);
+            Theme.Apply(t, Engine.Settings.Accent);
         }));
+        AccentRow.Add(general, config.Accent, profiles: true, a =>
+        {
+            Change(c => c.Accent = a);
+            ShowProfileColor();
+            Theme.Apply(Engine.Settings.WindowTheme, a);
+        });
         Ui.Row(general, Strings.T("Language", "Sprache"), Strings.T("Takes effect when the window opens again.", "Gilt, wenn das Fenster neu geöffnet wird."),
             Locked(Ui.Choice(new[] { ((string?)null, Strings.T("Like Windows", "Wie Windows")), ("en", "English"), ("de", "Deutsch") },
                 config.Language, v => Change(c => c.Language = v), 200), Policies.Language), showHelp: true);

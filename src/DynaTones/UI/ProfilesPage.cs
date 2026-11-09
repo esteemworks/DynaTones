@@ -149,7 +149,7 @@ public partial class MainWindow
 
         var codes = new[]
         {
-            (-1, Strings.T("At once", "Sofort")), (0, Strings.T("Soft", "Weich")), (Transitions.Gentle, Strings.T("Gentle", "Sanft")),
+            (0, Strings.T("Soft", "Weich")), (Transitions.Gentle, Strings.T("Gentle", "Sanft")),
             (10, Strings.T("Flowing, 10 min.", "Fließend, 10 Min.")), (30, Strings.T("Flowing, 30 min.", "Fließend, 30 Min.")), (60, Strings.T("Flowing, 60 min.", "Fließend, 60 Min.")),
         };
         var baseCode = Transitions.Code(settings.Wallpaper.Fade, settings.Wallpaper.BlendMinutes, settings.Wallpaper.BlendSeconds);
@@ -276,6 +276,7 @@ public partial class MainWindow
         editingProfile = true;
         newProfile = id == null;
         if (id != null) shownProfile = id;
+        ShowProfileColor();
         BuildProfilesPage();
         ProfilesView?.ScrollToHome();
     }
@@ -363,6 +364,7 @@ public partial class MainWindow
     void CloseProfileEditor()
     {
         editingProfile = false;
+        ShowProfileColor();
         BuildProfilesPage();
     }
 

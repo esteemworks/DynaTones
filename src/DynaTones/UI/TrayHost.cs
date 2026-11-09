@@ -20,7 +20,8 @@ public sealed class TrayHost : IDisposable
         Engine.Updated += UpdateTray;
         // The window's own color mode from the settings ("Like Windows" unless chosen otherwise); until 0.3.0 every
         // start went back to "Like Windows" whatever was chosen.
-        Theme.Apply(ConfigStore.Load().WindowTheme, AccentChoice.Brand);
+        var look = ConfigStore.Load();
+        Theme.Apply(look.WindowTheme, look.Accent);
         // The plan on screen before anything else: the first resolve runs here, before the tray icon, the pipe and
         // the window (STANDARD, start order).
         var start = Engine.StartAsync();

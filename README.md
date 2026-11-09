@@ -48,10 +48,11 @@ until the next one is due. It is worked out for where you live, so twilight and 
 December, and a noon picture still shows at noon in winter. Three pictures cover a day as well as sixteen. **Next image** shows the coming picture now and keeps the day one step ahead until its own time.
 
 ### Light that flows
-Four ways from one image to the next: at once, soft (Windows fades for about a second), gentle (three mixed steps in
-the last few seconds) or flowing: DynaTones mixes the two in small steps, about one a minute, over the last 10, 30 or
-60 minutes. A theme that shows the same place in other light then changes as slowly as the light itself. A package can
-have a transition of its own.
+No change of picture is cut off. Three ways from one image to the next: soft (a short fade of about a second), gentle
+(three mixed steps in the last few seconds) or flowing: DynaTones mixes the two in small steps, about one a minute,
+over the last 10, 30 or 60 minutes. A theme that shows the same place in other light then changes as slowly as the light
+itself. A package can have a transition of its own. Next image, a switch to dark or light with its picture and Back to
+the plan fade too, and the color mode changes halfway through the fade.
 
 ### Ready from the first start
 DynaTones brings "Lakeside", a drawn lake in eight lights, and shows it from the first start. The **gallery** under
@@ -109,7 +110,7 @@ can change. See [For organizations](#for-organizations).
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/desktop.png" alt="Desktop background: package, the transition as four choices, fit, and when each picture comes"><br><sub><b>Desktop:</b> package, transition, fit, and when each picture comes</sub></td>
+    <td width="50%"><img src="docs/images/desktop.png" alt="Desktop background: package, the transition as three choices, fit, and when each picture comes"><br><sub><b>Desktop:</b> package, transition, fit, and when each picture comes</sub></td>
     <td width="50%"><img src="docs/images/color-mode.png" alt="Color mode: the day as a band with the two switches, the rules as sentences, and apps, taskbar and pointer with a picture of day and night"><br><sub><b>Color mode:</b> by the sun, at set times or like the picture, with what changes along</sub></td>
   </tr>
   <tr>

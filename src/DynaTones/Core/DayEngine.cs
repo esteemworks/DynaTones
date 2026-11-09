@@ -227,9 +227,15 @@ public sealed class DayEngine : IDisposable
             var paused = Config.PausedUntil is { } until && until > now;
             if ((!paused || byHand) && !DryRun)
             {
-                // The color mode first: a registry value, on screen at once. Then the background, then the rest.
-                ApplyAppearance(reason);
+                // At start the color mode first: a registry value, on screen at once. Otherwise the background first: when it
+                // fades (QuickFade), the color mode changes halfway through, so both change together.
+                if (reason == "start") ApplyAppearance(reason);
                 ApplyWallpaper(reason);
+                if (reason != "start")
+                {
+                    if (fading) modeAfterFade = reason;
+                    else ApplyAppearance(reason);
+                }
                 PrepareGentle();
                 ApplyLockScreen(reason);
                 ApplySignIn();
@@ -297,6 +303,14 @@ public sealed class DayEngine : IDisposable
             : shown.Values.Any(p => !Wallpaper.SamePath(p, path)) || shown.Count == 0;
         if (!needed) return;
 
+        if (fading) return;
+        // From one of ours to the next: faded by DynaTones itself (see QuickFade). Not at start, where the picture
+        // comes first and fast, and not over a picture someone else set.
+        // Right after a fade Windows may still name its last frame for a moment: that is not a new change.
+        var justFaded = fadedTo != null && Wallpaper.SamePath(fadedTo, path) && DateTime.Now - fadedAt < TimeSpan.FromSeconds(10);
+        if (step == null && reason != "start" && !justFaded && shown.Values.FirstOrDefault() is { } from && Ours(from) && !Wallpaper.SamePath(from, path)
+            && QuickFade(from, path, reason)) return;
+
         // A different image while ours should be there: someone else set it. Worth a line in the log.
         var foreign = (reason == "check" || reason == "preference") && !shown.Values.All(Blend.IsStep);
         var before = shown.Values.FirstOrDefault(Blend.IsStep);
@@ -323,6 +337,84 @@ public sealed class DayEngine : IDisposable
                 "Windows hat den Hintergrund nicht übernommen. DynaTones versucht es in einer Minute erneut.");
         }
     }
+
+    bool fading;
+    /// <summary>A change of the color mode waiting for the middle of the fade; the reason it came with.</summary>
+    string? modeAfterFade;
+
+    void ModeAfterFade()
+    {
+        if (modeAfterFade is not { } reason) return;
+        modeAfterFade = null;
+        ApplyAppearance(reason);
+    }
+    string? fadedTo;
+    DateTime fadedAt;
+
+    /// <summary>A picture of DynaTones: an image of a package or a step of a mix, all in its data folder.</summary>
+    static bool Ours(string path) =>
+        File.Exists(path) && Path.GetFullPath(path).StartsWith(Path.GetFullPath(Paths.Data) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Every change of picture fades, whatever the transition and also by hand (Next image, a jump, back to the plan):
+    /// three mixed frames, a quarter, half and three quarters of the way, each shown for about a tenth of a second,
+    /// then the picture itself. Windows' own fade cannot be relied on: it follows Windows' animation settings and did
+    /// not show at all in Windows Sandbox (measured 09.11.2026, 31 frames a second, none in between). The frames are
+    /// mixed first, off the window's thread, at the size of the screens; until they are on screen nothing else changes
+    /// the background. False when there is nothing to mix from; then the picture is set as it is.
+    /// </summary>
+    bool QuickFade(string from, string to, string reason)
+    {
+        if (!File.Exists(to)) return false;
+        fading = true;
+        var fit = Config.Wallpaper.Fit;
+        var screen = fit == WallpaperFit.Center ? null : Wallpaper.Coverage(fit);
+        var frames = Enumerable.Range(1, 3).Select(n => (Path: Blend.FramePath(from, to, new Transition(0, 0, n, QuickSteps, n / 4.0, DateTime.Now)), Amount: n / 4.0)).ToList();
+        var watch = Stopwatch.StartNew();
+        Task.Run(async () =>
+        {
+            foreach (var (frame, amount) in frames)
+                if (!File.Exists(frame)) await Blend.MakeAsync(from, to, amount, frame, screen);
+        }).ContinueWith(done => dispatcher.BeginInvoke(async () =>
+        {
+            var mixed = watch.ElapsedMilliseconds;
+            if (!done.IsFaulted)
+            {
+                for (var n = 0; n < frames.Count; n++)
+                {
+                    Wallpaper.Set(frames[n].Path, fit, fade: true);
+                    if (n == 1) ModeAfterFade();
+                    await Task.Delay(FadeHold);
+                }
+            }
+            else
+            {
+                Log.Warning($"Fading to {Path.GetFileName(to)} could not be mixed: {done.Exception?.GetBaseException().Message}");
+            }
+            if (Wallpaper.Set(to, fit, fade: true))
+            {
+                LastWallpaperChange = DateTime.Now;
+                LastReason = reason;
+                Log.Info($"Wallpaper {Path.GetFileName(to)} ({reason}, faded{(done.IsFaulted ? " plainly" : $", mixed in {mixed} ms")})");
+            }
+            ModeAfterFade();
+            Blend.Clean(to, frames[^1].Path);
+            fadedTo = to;
+            fadedAt = DateTime.Now;
+            fading = false;
+            Later(TimeSpan.FromSeconds(2), "faded");
+        }), TaskScheduler.Default);
+        return true;
+    }
+
+    /// <summary>The frames of <see cref="QuickFade"/> count as steps of four, apart from Gentle's three and Flowing's.</summary>
+    const int QuickSteps = 4;
+
+    /// <summary>
+    /// How long each frame stands. Windows takes a new background at most about every 0.3 s and skips faster ones: at
+    /// 110, 150 and 200 ms none of the frames showed, at 300 ms all of them, in 6 of 6 runs (Windows Sandbox, 09.11.2026).
+    /// </summary>
+    const int FadeHold = 300;
 
     string? gentleReady;
     string? signInKey;

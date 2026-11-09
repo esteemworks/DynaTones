@@ -87,7 +87,6 @@ public partial class MainWindow
         var codes = new List<(int?, string)>
         {
             (null, Strings.T("As set for the desktop", "Wie beim Desktop eingestellt")),
-            (-1, Strings.T("At once", "Sofort")),
             (0, Strings.T("Soft, about 1 second", "Weich, etwa 1 Sekunde")),
             (Transitions.Gentle, Strings.T("Gentle, a few seconds", "Sanft, einige Sekunden")),
             (10, Strings.T("Flowing, 10 minutes", "Fließend, 10 Minuten")),

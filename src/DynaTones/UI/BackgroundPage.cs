@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -438,6 +438,7 @@ public partial class MainWindow
             Content = stack,
         };
         button.Click += (_, _) => ShowAddMenu(button);
+        Speak(button, Strings.T("Add package", "Paket hinzufügen"));
         if (!Policies.UsersMayImport) PolicyLock.Apply(button, Policies.AllowUserImport);
         return button;
     }
@@ -520,20 +521,18 @@ public partial class MainWindow
 
     static string TransitionName(int code) => code switch
     {
-        -1 => Strings.T("at once", "sofort"),
         0 => Strings.T("soft", "weich"),
         Transitions.Gentle => Strings.T("gentle", "sanft"),
         _ => Strings.T($"flowing over {code} minutes", $"fließend über {code} Minuten"),
     };
 
-    /// <summary>The four transitions as cards to choose from; flowing with its minutes in the card.</summary>
+    /// <summary>The three transitions as cards to choose from; flowing with its minutes in the card. Each fades.</summary>
     UniformGrid TransitionCards(int code, Action<int> set)
     {
-        var grid = new UniformGrid { Columns = 4 };
+        var grid = new UniformGrid { Columns = 3 };
         var flowing = code > 0 ? code : 30;
         (int Code, string Title, string Help)[] options =
         [
-            (-1, Strings.T("At once", "Sofort"), Strings.T("in one go", "auf einen Schlag")),
             (0, Strings.T("Soft", "Weich"), Strings.T("about 1 second", "etwa 1 Sekunde")),
             (Transitions.Gentle, Strings.T("Gentle", "Sanft"), Strings.T("a few seconds", "einige Sekunden")),
             (flowing, Strings.T("Flowing", "Fließend"), ""),
@@ -541,13 +540,14 @@ public partial class MainWindow
         for (var i = 0; i < options.Length; i++)
         {
             var (value, title, help) = options[i];
-            var selected = i == 3 ? code > 0 : code == value;
+            var last = i == options.Length - 1;
+            var selected = last ? code > 0 : code == value;
             var stack = new StackPanel();
             var radio = new RadioButton { Content = title, IsChecked = selected, GroupName = "transition-" + GetHashCode(), FontWeight = FontWeights.SemiBold };
             var chosen = value;
             radio.Checked += (_, _) => { if (!selected) set(chosen); };
             stack.Children.Add(radio);
-            if (i < 3) stack.Children.Add(new TextBlock { Style = S("Muted"), Text = help, Margin = new Thickness(28, 2, 0, 0) });
+            if (!last) stack.Children.Add(new TextBlock { Style = S("Muted"), Text = help, Margin = new Thickness(28, 2, 0, 0) });
             else
             {
                 var minutes = Ui.Choice(new[] { (10, Strings.T("10 minutes", "10 Minuten")), (30, Strings.T("30 minutes", "30 Minuten")), (60, Strings.T("60 minutes", "60 Minuten")) },
@@ -559,7 +559,7 @@ public partial class MainWindow
             grid.Children.Add(new Border
             {
                 Padding = new Thickness(12, 10, 12, 10),
-                Margin = i == 0 ? new Thickness(0, 0, 6, 0) : i == 3 ? new Thickness(6, 0, 0, 0) : new Thickness(3, 0, 3, 0),
+                Margin = i == 0 ? new Thickness(0, 0, 6, 0) : last ? new Thickness(6, 0, 0, 0) : new Thickness(3, 0, 3, 0),
                 CornerRadius = new CornerRadius(8),
                 BorderThickness = new Thickness(selected ? 2 : 1),
                 BorderBrush = selected ? B("Accent") : B("Line"),

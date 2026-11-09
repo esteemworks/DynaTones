@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -45,9 +45,13 @@ static class Snapshot
         app.Dispatcher.BeginInvoke(async () =>
         {
             await Task.Delay(1500);
-            foreach (var (theme, suffix) in new[] { (ThemeChoice.Light, "light"), (ThemeChoice.Dark, "dark") })
+            // `--snapshot <folder> <scale> accents`: every page with each accent of the settings, named <page>-<accent>-<mode>.
+            var accents = args.Length > 4 && args[4] == "accents" ? [.. EsteemWorks.Kit.UI.AccentRow.Choices(profiles: true)] : new[] { AccentChoice.Brand };
+            foreach (var accent in accents)
+            foreach (var (theme, mode) in new[] { (ThemeChoice.Light, "light"), (ThemeChoice.Dark, "dark") })
             {
-                Theme.Apply(theme, AccentChoice.Brand);
+                var suffix = accents.Length > 1 ? $"{accent.ToString().ToLowerInvariant()}-{mode}" : mode;
+                Theme.Apply(theme, accent);
                 window.ShowBackgroundPage("overview");
                 foreach (var tab in window.Tabs)
                 {

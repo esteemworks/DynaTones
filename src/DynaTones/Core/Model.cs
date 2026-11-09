@@ -18,6 +18,11 @@ public sealed class Config
     /// <summary>Nothing changes until then; null when not paused.</summary>
     public DateTime? PausedUntil { get; set; }
     public ThemeChoice WindowTheme { get; set; } = ThemeChoice.System;
+    /// <summary>
+    /// The window's accent: DynaTones' own, the profile the window shows (the default), Windows' or the family's Sand.
+    /// Settings from before 0.6.0 have none and get the default.
+    /// </summary>
+    public AccentChoice Accent { get; set; } = AccentChoice.Shown;
     /// <summary>What each profile changes, by the profile's id in the family's shared file; see <see cref="ProfileSettings"/>.</summary>
     public Dictionary<Guid, ProfileSettings> Profiles { get; set; } = [];
     /// <summary>The organization's recommendations as last applied, per policy, so each is applied once (see Policies).</summary>
@@ -265,14 +270,20 @@ public static class Transitions
 {
     public const int Gentle = -2, GentleSeconds = 6;
 
+    /// <summary>
+    /// The transition in effect. Every change fades at least softly: "At once" (Fade off, until 0.5.0) is no longer
+    /// offered, and where it is still saved (settings, a package, a profile) it is read as Soft (decided 09.11.2026: no
+    /// change of picture may look cut off).
+    /// </summary>
     public static (bool Fade, int Minutes, int Seconds) Effective(WallpaperSettings w, Package? p) =>
-        p?.Transition is { } t ? (t.Fade, t.BlendMinutes, t.BlendSeconds) : (w.Fade, w.BlendMinutes, w.BlendSeconds);
+        p?.Transition is { } t ? (true, t.BlendMinutes, t.BlendSeconds) : (true, w.BlendMinutes, w.BlendSeconds);
 
-    public static int Code(bool fade, int minutes, int seconds) => !fade ? -1 : minutes > 0 ? minutes : seconds > 0 ? Gentle : 0;
+    /// <summary>The choice shown for a transition; a saved "At once" shows as Soft, which is what it does now.</summary>
+    public static int Code(bool fade, int minutes, int seconds) => minutes > 0 ? minutes : seconds > 0 ? Gentle : 0;
 
     public static TransitionSetting FromCode(int code) => new()
     {
-        Fade = code != -1,
+        Fade = true,
         BlendMinutes = Math.Max(0, code),
         BlendSeconds = code == Gentle ? GentleSeconds : 0,
     };

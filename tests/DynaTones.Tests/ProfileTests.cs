@@ -40,10 +40,14 @@ public class ProfileTests
     [Fact]
     public void Transition_codes_go_both_ways()
     {
-        foreach (var code in new[] { -1, 0, Transitions.Gentle, 10, 30, 60 })
+        foreach (var code in new[] { 0, Transitions.Gentle, 10, 30, 60 })
         {
             var t = Transitions.FromCode(code);
             Assert.Equal(code, Transitions.Code(t.Fade, t.BlendMinutes, t.BlendSeconds));
         }
+        // "At once" from before 0.6.0 (in a profile, a package or the settings) is read as Soft, which fades.
+        var old = Transitions.FromCode(-1);
+        Assert.True(old.Fade);
+        Assert.Equal(0, Transitions.Code(false, 0, 0));
     }
 }
