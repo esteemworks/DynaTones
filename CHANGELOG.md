@@ -2,7 +2,7 @@
 
 All notable changes to DynaTones. Downloads will be on the [releases page](../../releases) from the first release on.
 
-## Not released yet
+## 0.5.0
 
 - **Switch to dark** or **light** in the tray and next to Next image: only the color mode, the picture stays, until
   the plan comes to that mode by itself; from then on the day goes on as planned. Without DynaTones' color mode it

@@ -10,7 +10,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>DynaTones</AssemblyName>
     <RootNamespace>DynaTones</RootNamespace>
-    <Version>0.4.0</Version>
+    <Version>0.5.0</Version>
     <StartupObject>DynaTones.Program</StartupObject>
     <Product>DynaTones</Product>
     <AssemblyTitle>DynaTones</AssemblyTitle>

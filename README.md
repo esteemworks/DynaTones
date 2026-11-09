@@ -156,7 +156,8 @@ lock screen picture and color mode stay as they are at that moment.
 > The setup is not signed with a public code signing certificate yet. Windows SmartScreen therefore warns about an
 > unknown publisher: choose "More info", then "Run anyway". With Smart App Control or policies like AppLocker, WDAC or
 > ASR rules, Windows may block it.
-> No scanner on VirusTotal flags the setup of version 0.4.0: [report](https://www.virustotal.com/gui/file/39451ced1486bba2c6fdb1a1fb592b81fda6fa360516a6673daffce5a3ffaf52).
+> On VirusTotal one of 65 scanners flags the setup of version 0.5.0 (DeepInstinct, a machine-learning scanner, without
+> naming a threat); the other 64 find nothing: [report](https://www.virustotal.com/gui/file/6c97b58dffbd146034dd4635485e03f23af1e8781c7f5272dd5046a62ae0bf8e).
 
 ## How it works
 
