@@ -23,9 +23,12 @@ public partial class MainWindow : Window
     {
         this.host = host;
         InitializeComponent();
-        CaptionIcon.Source = AppIcons.WindowIcon(32);
-        Icon = AppIcons.WindowIcon(64);
-        KitWindow.Attach(this, MaxButton);
+        // The family's window from the kit: title bar, title, actions, tabs with the gear (STANDARD, "The window").
+        Frame.Attach(this);
+        TabBackground = Frame.AddTab("background", "");
+        TabMode = Frame.AddTab("mode", "");
+        TabProfiles = Frame.AddTab("profiles", "");
+        Frame.PageChanged += PageChanged;
         _ = new MiddleScroll(this, ScrollMarker);
         dialog = new KitDialog(DialogLayer);
         // A package waiting for Undo is really deleted when the window goes.
@@ -74,8 +77,9 @@ public partial class MainWindow : Window
             Strings.T("Delete", "Löschen"), danger: true);
     }
 
-    /// <summary>The tab the settings return to.</summary>
-    System.Windows.Controls.Primitives.ToggleButton? lastTab;
+    readonly RadioButton TabBackground, TabMode, TabProfiles;
+    System.Windows.Controls.Primitives.ToggleButton GearButton => Frame.Gear;
+    TextBlock SummaryText => Frame.Summary;
 
     void ApplyTexts()
     {
@@ -83,13 +87,8 @@ public partial class MainWindow : Window
         TabBackground.Content = Strings.T("Background", "Hintergrund");
         TabMode.Content = Strings.T("Color mode", "Farbmodus");
         TabProfiles.Content = Strings.T("Profiles", "Profile");
-        SetGearLabel(false);
-        MinButton.ToolTip = Strings.T("Minimize", "Minimieren");
-        CloseButton.ToolTip = Strings.T("Close", "Schließen");
+        Frame.ApplyTexts();
         // Names for screen readers: icon buttons and buttons made of an icon and a text get none from WPF.
-        Speak(MinButton, Strings.T("Minimize", "Minimieren"));
-        Speak(CloseButton, Strings.T("Close", "Schließen"));
-        NameMaxButton();
         RefreshButton.ToolTip = Strings.T(
             "Update now (F5): reads the settings and the location again and puts everything right for this moment. DynaTones does this by itself; this is for when something else got in the way.",
             "Jetzt aktualisieren (F5): liest Einstellungen und Standort neu und setzt alles so, wie es jetzt sein soll. Das macht DynaTones von selbst; das hier ist für den Fall, dass etwas dazwischenkam.");
@@ -117,14 +116,6 @@ public partial class MainWindow : Window
     }
 
     // ---------- Header ----------
-
-    void Minimize_Click(object sender, RoutedEventArgs e) => KitWindow.Minimize(this);
-    void Maximize_Click(object sender, RoutedEventArgs e) => KitWindow.ToggleMaximize(this);
-    void Close_Click(object sender, RoutedEventArgs e) => Close();
-    // The kit switches the maximize button's tooltip with the window state; its name follows once that is done.
-    void Window_StateChanged(object? sender, EventArgs e) => Dispatcher.BeginInvoke(NameMaxButton);
-
-    void NameMaxButton() => Speak(MaxButton, MaxButton.ToolTip as string ?? Strings.T("Maximize", "Maximieren"));
 
     /// <summary>The name a screen reader reads for <paramref name="element"/>.</summary>
     static void Speak(DependencyObject element, string name) => System.Windows.Automation.AutomationProperties.SetName(element, name);
@@ -163,48 +154,17 @@ public partial class MainWindow : Window
         menu.IsOpen = true;
     }
 
-    void Tab_Checked(object sender, RoutedEventArgs e)
+    /// <summary>A tab was chosen or the settings opened or closed (the kit's frame keeps the rules of tabs and gear).</summary>
+    void PageChanged()
     {
         if (BackgroundView == null) return;
-        lastTab = (System.Windows.Controls.Primitives.ToggleButton)sender;
         // A tab always opens on its own first page; the gallery and the pages under Background start from there.
-        if (galleryOpen || page != BgPage.Overview)
+        if (Frame.Page != null && (galleryOpen || page != BgPage.Overview))
         {
             galleryOpen = false;
             OpenPage(BgPage.Overview);
         }
-        // A click on a tab while the settings are open leads back to that tab.
-        if (GearButton.IsChecked == true) GearButton.IsChecked = false;
         ShowPage();
-    }
-
-    // Checked/Unchecked rather than Click, so the keyboard and screen readers (toggle) work the same way.
-    void Gear_Changed(object sender, RoutedEventArgs e)
-    {
-        var open = GearButton.IsChecked == true;
-        SetGearLabel(open);
-        Motion.TurnIn(GearTurn);
-        if (BackgroundView == null) return;
-        if (open)
-        {
-            // No tab is chosen while the settings are open, so a click on any of them leads back.
-            foreach (var tab in new[] { TabBackground, TabMode, TabProfiles }) tab.IsChecked = false;
-        }
-        else if (TabBackground.IsChecked != true && TabMode.IsChecked != true && TabProfiles.IsChecked != true)
-        {
-            (lastTab ?? TabBackground).IsChecked = true;
-        }
-        ShowPage();
-    }
-
-    /// <summary>The gear opens the settings; while they are open it is a × that closes them.</summary>
-    void SetGearLabel(bool open)
-    {
-        GearIcon.Text = open ? "" : "";
-        GearIcon.FontSize = open ? 12 : 15;
-        var label = open ? Strings.T("Close settings (Esc)", "Einstellungen schließen (Esc)") : Strings.T("Settings", "Einstellungen");
-        GearButton.ToolTip = label;
-        System.Windows.Automation.AutomationProperties.SetName(GearButton, label);
     }
 
     void ShowPage()

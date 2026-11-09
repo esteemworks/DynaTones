@@ -11,6 +11,10 @@ All notable changes to DynaTones. Downloads will be on the [releases page](../..
 - **At once** is gone: where it was set (the desktop, a package, a profile), Soft takes its place
 - **Accent color** in Settings, General: DynaTones, Profile (the default: the color of the profile that applies, or of
   the one being edited), Windows, or Sand, the family's quiet beige
+- The window's frame (title bar, header, tabs and the settings gear) comes from the family's kit, as in every
+  EsteemWorks app; it looks and works as before
+- Screen readers: the Add package tile, the choices for apps and taskbar and the Earlier state button have names; Add
+  pointer package sits below the two pointer choices, so Tab no longer jumps up the page
 
 ## 0.5.0
 
