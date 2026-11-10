@@ -124,7 +124,7 @@ public static class SignIn
         }
     }
 
-    public static bool IsElevated => new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
+    public static bool IsElevated => KitApp.IsElevated;
 
     // ---------- Setup (admin) ----------
 
@@ -143,19 +143,8 @@ public static class SignIn
         else RunElevated(UninstallCommand);
     }
 
-    static void RunElevated(string command)
-    {
-        try
-        {
-            using var p = Process.Start(new ProcessStartInfo(Environment.ProcessPath!, command) { UseShellExecute = true, Verb = "runas" });
-            p?.WaitForExit(120_000);
-        }
-        catch (Exception ex)
-        {
-            // Declined UAC: the rest of DynaTones works, the sign-in screen stays as it is.
-            Log.Warning($"Sign-in screen not set up: {ex.Message}");
-        }
-    }
+    /// <summary>Through the kit, so each prompt is counted in the log ("Elevated start"); declined, the rest works on.</summary>
+    static void RunElevated(string command) => KitElevation.Run(command);
 
     public static void Install()
     {

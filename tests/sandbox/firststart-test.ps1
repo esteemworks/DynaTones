@@ -61,17 +61,42 @@ function Install([string[]]$Arguments = @(), [pscredential]$Credential) {
     Write-Note "setup $($Arguments -join ' ') finished with exit code $($process.ExitCode)"
 }
 
+# The sandbox's account has no split UAC token: everything runs elevated and Windows never needs to ask. Acting as an
+# administrator on a normal PC (kit KitElevation), every start that would bring a UAC prompt is a line
+# "Elevated start" in the log; the test counts them: Basic 0, Full 1, "Set up fully" 1, and none while it runs.
+$env:ESTEEMWORKS_ASSUME_STANDARD = '1'
+[Environment]::SetEnvironmentVariable('ESTEEMWORKS_ASSUME_STANDARD', '1', 'User')
+function Prompts { @(Select-String -Path "$data\DynaTones.log" -Pattern 'INFO .*Elevated start: ' -ErrorAction SilentlyContinue).Count }
+# A while of everyday use: the minute's check, Next image, the other color mode and back.
+function Use-Awhile {
+    Start-Process $exe -ArgumentList '--next'; Start-Sleep 5
+    Start-Process $exe -ArgumentList '--switch-mode'; Start-Sleep 5
+    Start-Process $exe -ArgumentList '--switch-mode'; Start-Sleep 5
+    Start-Process $exe -ArgumentList '--autostart'
+    Start-Sleep 65
+}
+
 # ---------- 1. Administrator, Basic ----------
 
 $before = Look
 Write-Note "before: $before"
-# The page as it shows, then cancelled: Basic chosen at first, Full offered.
+# Through the wizard as a user would: the page (Basic chosen at first, Full offered), Install, the finish page with
+# "Open DynaTones" ticked, Finish.
+Add-Type -AssemblyName System.Windows.Forms, Microsoft.VisualBasic
 $wizard = Start-Process $setup -PassThru
-Save-Window 'DynaTones' 'setup-page-admin' | Out-Null
-Stop-Process $wizard -Force -ErrorAction SilentlyContinue; Stop-Setup
-Start-Sleep 2
-
-Install
+$page = Save-Window 'DynaTones' 'setup-page-admin'
+if ($page) {
+    [Microsoft.VisualBasic.Interaction]::AppActivate($page.Id)
+    Start-Sleep 1
+    [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
+    Start-Sleep 12
+    Save-Window 'DynaTones' 'setup-finished-admin' | Out-Null
+    [Microsoft.VisualBasic.Interaction]::AppActivate($page.Id)
+    Start-Sleep 1
+    [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
+}
+for ($i = 0; $i -lt 60 -and -not $wizard.HasExited; $i++) { Start-Sleep 1 }
+Write-Note "wizard finished with exit code $($wizard.ExitCode)"
 $exe = "$env:LOCALAPPDATA\Programs\DynaTones\DynaTones.exe"
 Test-Check '1 installed for the user' (Test-Path $exe)
 Test-Check '1 not switched on yet' (Test-Path "$data\not-switched-on")
@@ -88,6 +113,16 @@ Start-Sleep 15
 $on = Look
 Test-Check '1 switched on: the day is on screen' ($on -ne $before -and -not (Test-Path "$data\not-switched-on")) "now $on"
 Save-Screen '1-switched-on'
+Test-Check '1 Basic: no UAC prompt' ((Prompts) -eq 0) "$(Prompts) elevated starts"
+
+# "Set up fully" under Settings, General (the same as --setup-full): one UAC prompt for all of Full.
+(Start-Process $exe -ArgumentList '--setup-full' -PassThru).WaitForExit()
+Test-Check '1 Set up fully: one UAC prompt' ((Prompts) -eq 1) "$(Prompts) elevated starts"
+Test-Check '1 Set up fully: event log source' (Test-Path $source)
+schtasks /query /tn '\EsteemWorks\DynaTones sign-in screen now' 2>$null | Out-Null
+Test-Check '1 Set up fully: sign-in screen task' ($LASTEXITCODE -eq 0)
+Use-Awhile
+Test-Check '1 afterwards no UAC prompt while it runs' ((Prompts) -eq 1) "$(Prompts) elevated starts"
 
 Uninstall-App
 Get-Process DynaTones -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -130,9 +165,14 @@ $task = schtasks /query /tn '\EsteemWorks\DynaTones sign-in screen now' 2>$null
 Test-Check '3 Full: sign-in screen task' ($LASTEXITCODE -eq 0)
 $log = Get-Content "$data\DynaTones.log" -ErrorAction SilentlyContinue
 Test-Check '3 Full: one elevated pass' (@($log | Select-String 'Admin tier: setting up with admin rights').Count -eq 1)
+Test-Check '3 Full: one UAC prompt in the setup' ((Prompts) -eq 1) "$(Prompts) elevated starts"
 Start-Sleep 15
 $now = Look
 Test-Check '3 nothing changed before switching on' ($now -eq $before) "before $before | now $now"
+Start-Process $exe -ArgumentList '--switch-on'
+Start-Sleep 10
+Use-Awhile
+Test-Check '3 afterwards no UAC prompt while it runs' ((Prompts) -eq 1) "$(Prompts) elevated starts"
 
 Uninstall-App
 Complete-SandboxTest

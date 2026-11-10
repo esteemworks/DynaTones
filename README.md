@@ -311,7 +311,7 @@ Command line: `--show`, `--autostart`, `--plan <file> [package]` (today's plan a
 `--snapshot <folder>` (all pages as PNGs, off screen, screen by screen down to the end; `--snapshot <folder> 1 intro`
 the introduction), `--switch-on` (as Switch DynaTones on at the end of the introduction),
 `--diagnostics [folder]`, `--diagnostics-mode on|off|<hours>`. For the setup:
-`--setup [--admin] [--new]`, `--setup-admin`, `--uninstall`, `--prepare-update`, `--updates on|off`; the setup itself
+`--setup [--admin] [--new]`, `--setup-admin`, `--setup-full` (as Set up fully under Settings, General), `--uninstall`, `--prepare-update`, `--updates on|off`; the setup itself
 takes `/FULL` (Full in a silent installation) and `/ALLUSERS`; after its own update the app starts with
 `--updated`. `DYNATONES_UPDATE_FEED=<file or address>` stands in for the GitHub release in tests, and
 `DYNATONES_GALLERY=<folder or address>` for the gallery. With `DYNATONES_DRYRUN=1` DynaTones calculates and shows
