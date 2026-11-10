@@ -53,7 +53,7 @@ about 10 km, is saved on your desktop and is not sent anywhere; you decide whom 
 
 Depending on your settings: the desktop wallpaper, the color mode of apps and of Windows, the mouse pointer scheme and,
 when you switch it on, the picture of your lock screen and whether Windows spotlight shows its own pictures there.
-It adds itself to start at sign-in, which you can switch off. With the setup's admin option it also sets up its source
+It adds itself to start at sign-in, which you can switch off. Set up as "Full" it also sets up its source
 in the Windows event log. Uninstalling removes start at sign-in, the event log source and the program and gives Windows spotlight back if
 DynaTones switched it off; the wallpaper, the lock screen picture and the color mode stay as they are at that moment.
 

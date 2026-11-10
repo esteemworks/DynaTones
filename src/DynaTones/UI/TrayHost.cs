@@ -18,6 +18,12 @@ public sealed class TrayHost : IDisposable
         if (dryRun) DayEngine.DryRun = true;
         Engine = new DayEngine(Application.Current.Dispatcher);
         Engine.Updated += UpdateTray;
+        // Switched on at the end of the introduction (or with --switch-on): from now on the day is on screen.
+        KitIntro.SwitchedOn += () => Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            Engine.Reload();
+            Engine.Resolve("switched on");
+        });
         // The window's own color mode from the settings ("Like Windows" unless chosen otherwise); until 0.3.0 every
         // start went back to "Like Windows" whatever was chosen.
         var look = ConfigStore.Load();
@@ -81,6 +87,10 @@ public sealed class TrayHost : IDisposable
             case "jump-mode":
                 Engine.JumpToMode();
                 break;
+            // --switch-on: as "Switch DynaTones on" at the end of the introduction (deployment, tests).
+            case "switch-on":
+                KitIntro.SwitchOn();
+                break;
             // Sent by --import from the command line, after the settings were replaced.
             case KitSettings.ReloadMessage:
                 Engine.Reload();
@@ -122,13 +132,20 @@ public sealed class TrayHost : IDisposable
     void UpdateTray()
     {
         if (tray == null) return;
-        tray.Status = Engine.Plan?.NextAnnounced is { } next ? Strings.T("Next change at ", "Nächster Wechsel um ") + Strings.Time(next) : "";
+        // Not switched on yet: nothing changes, so the tray says so and offers no color mode.
+        var off = KitIntro.Pending;
+        tray.Status = off ? Strings.T("Not switched on yet", "Noch nicht eingeschaltet")
+            : Engine.Plan?.NextAnnounced is { } next ? Strings.T("Next change at ", "Nächster Wechsel um ") + Strings.Time(next) : "";
         var plan = Engine.Plan;
-        if (switchItem != null) switchItem.Text = SwitchText(plan);
+        if (switchItem != null)
+        {
+            switchItem.Text = SwitchText(plan);
+            switchItem.Visible = !off;
+        }
         if (jumpItem != null)
         {
             jumpItem.Text = JumpText(plan);
-            jumpItem.Visible = plan?.Dark != null && (plan.ModeHeld || plan.NextModeChange != null);
+            jumpItem.Visible = !off && plan?.Dark != null && (plan.ModeHeld || plan.NextModeChange != null);
         }
     }
 

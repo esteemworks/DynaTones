@@ -45,8 +45,10 @@ public partial class App : Application
         // a running copy. The wallpaper and light or dark stay as they are when DynaTones goes.
         // Also --diagnostics [folder] and --diagnostics-mode on|off|<hours>, the family's troubleshooting lines, and
         // --updates on|off from the setup's task "look for updates", and --export or --import <file> for the settings.
-        // The admin tier also sets up the sign-in screen (SignIn: two SYSTEM tasks and their folders).
-        if (KitSetup.TryRun(args, setup: admin => { if (admin) SignIn.Setup(); }, uninstall: GiveBack) || KitDiagnostics.TryRun(args) ||
+        // The admin tier ("Full") also sets up the sign-in screen (SignIn: two SYSTEM tasks and their folders), in the
+        // same elevated pass as the event log, so Windows asks once (--setup-admin).
+        // --setup --new marks a new installation: nothing changes in Windows until DynaTones is switched on (KitIntro).
+        if (KitSetup.TryRun(args, uninstall: GiveBack, adminSetup: SignIn.Install) || KitDiagnostics.TryRun(args) ||
             KitUpdate.TryRun(args) || KitSettings.TryRun(args))
         {
             Shutdown();
@@ -119,11 +121,14 @@ public partial class App : Application
         {
             SingleInstance.HandOver(mode switch
             {
-                "--autostart" => "refresh", "--next" => "next", "--switch-mode" => "switch-mode", "--jump-mode" => "jump-mode", _ => "show",
+                "--autostart" => "refresh", "--next" => "next", "--switch-mode" => "switch-mode", "--jump-mode" => "jump-mode",
+                "--switch-on" => "switch-on", _ => "show",
             });
             Shutdown();
             return;
         }
+        // Switched on from the command line (deployment, tests) before anything is applied.
+        if (mode == "--switch-on") KitIntro.SwitchOn();
 
         KitDiagnostics.Start(args);
         // Only does something when the setup brought a package not added yet (the first start): then it has to come

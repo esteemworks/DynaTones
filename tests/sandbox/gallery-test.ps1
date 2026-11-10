@@ -12,6 +12,9 @@ function Run($arguments) { (Start-Process $exe -ArgumentList $arguments -WindowS
 
 # Installed with the setup, which starts DynaTones: the first start adds the package the setup brings.
 $exe = Install-App
+# A new installation waits to be switched on (kit STANDARD, "First start"); this test is about what comes after.
+Start-Process $exe -ArgumentList '--switch-on'
+Start-Sleep 3
 $app = Split-Path $exe
 $data = "$env:APPDATA\DynaTones"
 Test-Check 'setup: brings Lakeside' (Test-Path "$app\packages\lakeside.zip")

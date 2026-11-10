@@ -26,10 +26,19 @@ foreach ($service in 'vmictimesync', 'w32time') {
 function Note($text) { Write-Note $text }
 
 # Installed with the setup, for the user only: no admin rights needed.
+$wallpaperBefore = (Get-ItemProperty 'HKCU:\Control Panel\Desktop').WallPaper
 $exe = Install-App
 $app = Split-Path $exe
 $data = "$env:APPDATA\DynaTones"
 Test-Check 'setup: starts at sign-in' (Test-Autostart)
+# A new installation changes nothing until it is switched on (kit STANDARD, "First start"); then the day begins.
+Test-Check 'first start: not switched on yet' (Test-Path "$data\not-switched-on")
+Start-Sleep 10
+$wallpaperNow = (Get-ItemProperty 'HKCU:\Control Panel\Desktop').WallPaper
+Test-Check 'first start: the desktop stays as it was' ($wallpaperNow -eq $wallpaperBefore) "before $wallpaperBefore | now $wallpaperNow"
+Start-Process $exe -ArgumentList '--switch-on'
+Start-Sleep 5
+Test-Check 'switched on' (-not (Test-Path "$data\not-switched-on"))
 
 function Shot($name) {
     $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds

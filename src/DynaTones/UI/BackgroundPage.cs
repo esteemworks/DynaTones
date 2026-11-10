@@ -90,6 +90,8 @@ public partial class MainWindow
                 break;
         }
         shownKey = PageKey();
+        // A package added during the introduction shows on its step at once.
+        if (Frame.IntroStepId == "place") Frame.RefreshStep();
         if (watch.ElapsedMilliseconds > 150) Log.Info($"Page {page} took {watch.ElapsedMilliseconds} ms to build");
     }
 
@@ -103,7 +105,7 @@ public partial class MainWindow
         PauseIcon.Text = paused ? "" : "";
         PauseChevron.Visibility = paused ? Visibility.Collapsed : Visibility.Visible;
         Speak(PauseButton, PauseText.Text);
-        SummaryText.Text = Summary(paused);
+        SummaryText.Text = KitIntro.Pending ? NotSwitchedOn : Summary(paused);
 
         if (page is BgPage.Overview or BgPage.Desktop or BgPage.Lock && PageKey() != shownKey) BuildBackground();
         else if (timeline != null) timeline.Show(PreviewPlan(), Engine.Package, previewDate == null);
@@ -117,7 +119,7 @@ public partial class MainWindow
         return string.Join("|", page, plan?.Current?.Image, plan?.Current?.Start, plan?.Next?.Image, plan?.Next?.Start, plan?.Skipped?.Start,
             plan?.LockCurrent?.Image, plan?.LockPackage?.Id, plan?.Dark, plan?.ModeHeld, plan?.NextModeChange, plan?.Dark == null ? Appearance.AppsLight : null, Engine.Problem, Engine.LockProblem, c.Wallpaper.PackageId,
             c.Wallpaper.Enabled, c.LockScreen.Enabled, c.LockScreen.Source, c.LockScreen.PackageId, c.LockScreen.SignIn, c.PausedUntil, previewDate,
-            Packages.LoadAll().Count);
+            Packages.LoadAll().Count, KitIntro.Pending);
     }
 
     Plan? PreviewPlan() => previewDate is { } date && date != DateOnly.FromDateTime(DateTime.Now)
@@ -162,7 +164,8 @@ public partial class MainWindow
             Dispatcher.BeginInvoke(BuildBackground);
         };
         var dateRow = Ui.Horizontal();
-        if (previewDate == null && plan != null)
+        // Not switched on yet: nothing to skip or switch, as nothing is on screen.
+        if (previewDate == null && plan != null && !KitIntro.Pending)
         {
             var paused = c.PausedUntil is { } until && until > DateTime.Now;
             var pausedNote = paused ? Strings.T(" Paused: it stays like this until you resume.", " Pausiert: so bleibt es, bis du fortsetzt.") : "";

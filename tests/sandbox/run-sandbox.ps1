@@ -18,7 +18,7 @@ param(
     # (gallery-test.ps1: the package the setup brings, and the gallery from -Gallery) or "theme" (theme-test.ps1: the
     # window's colors when Windows switches between light and dark while it is open) or "shots" (shots-test.ps1: the
     # README pictures with demo data, -Packages a folder with glut.zip, -Gallery the gallery, -Language the app's language).
-    [ValidateSet('day', 'policy', 'log', 'device', 'update', 'signin', 'gallery', 'theme', 'shots')] [string]$Test = 'day',
+    [ValidateSet('day', 'policy', 'log', 'device', 'update', 'signin', 'gallery', 'theme', 'shots', 'firststart')] [string]$Test = 'day',
     # For -Test update: the setup of a newer version (built with a higher <Version>).
     [string]$NewerSetup,
     # For -Test gallery: the folder tools\packages\galerie.py made (packages.json, the .zip files and previews).
@@ -55,7 +55,7 @@ if ($Test -in 'gallery', 'shots') {
     if (-not $Gallery -or -not (Test-Path (Join-Path $Gallery 'packages.json'))) { throw '-Test gallery needs -Gallery with a packages.json' }
     $extra.gal = $Gallery
 }
-$script = @{ day = 'sandbox-test.ps1'; policy = 'policy-test.ps1'; log = 'log-test.ps1'; device = 'device-test.ps1'; update = 'update-test.ps1'; signin = 'signin-test.ps1'; gallery = 'gallery-test.ps1'; theme = 'theme-test.ps1'; shots = 'shots-test.ps1' }[$Test]
+$script = @{ day = 'sandbox-test.ps1'; policy = 'policy-test.ps1'; log = 'log-test.ps1'; device = 'device-test.ps1'; update = 'update-test.ps1'; signin = 'signin-test.ps1'; gallery = 'gallery-test.ps1'; theme = 'theme-test.ps1'; shots = 'shots-test.ps1'; firststart = 'firststart-test.ps1' }[$Test]
 & $runner -App DynaTones -Short dt -Setup $setupFile.FullName -TestScript (Join-Path $PSScriptRoot $script) `
     -WorkFolder $WorkFolder -Extra $extra -TimeoutMinutes $TimeoutMinutes
 if ($upd) { Remove-Item $upd -Recurse -Force }

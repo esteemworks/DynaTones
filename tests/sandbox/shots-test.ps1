@@ -19,6 +19,9 @@ if ($language -eq 'de') { Set-Culture de-DE }
 $names = @{ en = @('Weekend', 'Evenings'); de = @('Wochenende', 'Abends') }[$language]
 
 $exe = Install-App
+# A new installation waits to be switched on (kit STANDARD, "First start"); this test is about what comes after.
+Start-Process $exe -ArgumentList '--switch-on'
+Start-Sleep 3
 $data = "$env:APPDATA\DynaTones"
 for ($i = 0; $i -lt 30 -and -not (Test-Path "$data\bundled-packages.txt"); $i++) { Start-Sleep 1 }
 Get-Process DynaTones -ErrorAction SilentlyContinue | Stop-Process -Force

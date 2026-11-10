@@ -1,4 +1,4 @@
-﻿# Runs inside Windows Sandbox: installs DynaTones with the admin tier and checks the screen before sign-in. The admin
+# Runs inside Windows Sandbox: installs DynaTones with the admin tier and checks the screen before sign-in. The admin
 # tier sets up two SYSTEM tasks and two folders; with the lock screen and "also the screen before signing in" switched
 # on, DynaTones hands over the pictures of the next 36 hours, the task sets the device's lock screen picture
 # (Personalization CSP), and after locking, Windows has its own copy of it. A plan that points outside the request
@@ -17,7 +17,10 @@ function Status { if (Test-Path "$root\signin\status.json") { Get-Content "$root
 function RunNow { schtasks /run /tn '\EsteemWorks\DynaTones sign-in screen now' | Out-Null; Start-Sleep 8 }
 
 Test-Check 'the device had no lock screen values before' (-not (Test-Path $csp))
-$exe = Install-App -SetupArguments '/MERGETASKS="adminfeatures"'
+$exe = Install-App -SetupArguments '/FULL'
+# A new installation waits to be switched on (kit STANDARD, "First start"); this test is about what comes after.
+Start-Process $exe -ArgumentList '--switch-on'
+Start-Sleep 3
 function Run([string[]]$arguments) { (Start-Process $exe -ArgumentList $arguments -WindowStyle Hidden -PassThru).WaitForExit() }
 
 # Set up by the admin tier.

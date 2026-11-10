@@ -17,8 +17,9 @@ You will get an answer as soon as possible. Once a fix is released, the report c
 
 ## Design notes
 
-- DynaTones always runs with normal rights and installs per user. Admin rights are asked for only once, by the setup's
-  admin option or by **Set up** under Troubleshooting, to register the event log source
+- DynaTones always runs with normal rights and installs per user. Admin rights are asked for only once, when "Full" is
+  chosen in the setup or with **Set up fully** under Settings, General: one elevated pass registers the event log
+  source and the sign-in screen tasks
 - Images are read with Windows' own decoders. Packages are copied into the data folder before they are read, and a
   `.zip` or `.ddw` is unpacked into a folder of its own
 - Policies are read, never written. A fixed policy value always wins over the user's own setting, and the user's

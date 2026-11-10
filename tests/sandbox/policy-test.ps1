@@ -9,6 +9,9 @@ Start-SandboxTest -Elevate
 $out = $Kit.Results
 
 $exe = Install-App
+# A new installation waits to be switched on (kit STANDARD, "First start"); this test is about what comes after.
+Start-Process $exe -ArgumentList '--switch-on'
+Start-Sleep 3
 $data = "$env:APPDATA\DynaTones"
 function Run($arguments) { (Start-Process $exe -ArgumentList $arguments -WindowStyle Hidden -PassThru).WaitForExit() }
 function Own { Get-Content "$data\config.json" -Raw | ConvertFrom-Json }

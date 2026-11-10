@@ -53,6 +53,8 @@ while ((Get-Date) -lt $deadline) {
 }
 Test-Check "updated to the newer version" ($after -like "$version*") "$before -> $after"
 Start-Sleep 10
+# An update never brings the introduction: the installation goes on as it was (kit STANDARD, "First start").
+Test-Check 'update: no introduction, still switched on' (-not (Test-Path "$data\not-switched-on"))
 
 $lines = Get-Content $log -ErrorAction SilentlyContinue
 Test-Check 'update found in the log' ([bool]($lines | Select-String -Pattern "Update found: DynaTones $version" -Quiet))

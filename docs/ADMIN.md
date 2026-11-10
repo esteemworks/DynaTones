@@ -19,7 +19,7 @@ starting value users can change.
 | Install, update, uninstall per user | no; to `%LOCALAPPDATA%\Programs\DynaTones` |
 | Install, update, uninstall per device | yes; to `%ProgramFiles%\DynaTones`, for all users |
 | Wallpaper, color mode, mouse pointer, lock screen | no |
-| The screen before signing in follows the day | yes, once per device: the admin option or the per-device installation sets up two SYSTEM tasks; switching it on is then up to each user, or the policy `SignInScreen` |
+| The screen before signing in follows the day | yes, once per device: "Full" in the setup or the per-device installation sets up two SYSTEM tasks; switching it on is then up to each user, or the policy `SignInScreen` |
 | Register the event log source `DynaTones` | yes, once per device; included in the per-device installation |
 | Fixed or recommended policies for the device (HKLM) | yes, as with any policy |
 | Policies for a user (HKCU `Software\Policies`) | yes; users cannot write that key themselves |
@@ -34,7 +34,7 @@ One setup for both ways. It brings its own .NET.
 | Context | system, or an administrator | the user; in the system context it would install for the system account |
 | Folder | `%ProgramFiles%\DynaTones` | `%LOCALAPPDATA%\Programs\DynaTones` |
 | Start at sign-in | device Run key, for all users; only an administrator switches it off | the user's Run key; the user switches it |
-| Event log source | set up with the installation | with the admin option, or later under Troubleshooting |
+| Event log source | set up with the installation | with "Full" in the setup, or later with Set up fully under Settings, General |
 | Install silently | `<setup> /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /ALLUSERS` | `<setup> /VERYSILENT /SUPPRESSMSGBOXES /NORESTART` |
 | Uninstall silently | `"%ProgramFiles%\DynaTones\unins000.exe" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART` | `"%LOCALAPPDATA%\Programs\DynaTones\unins000.exe" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART` |
 
@@ -43,7 +43,7 @@ Each user's settings and packages live in their own `%APPDATA%\DynaTones` either
 for the app family when a user starts it the first time. After a silent installation per device, DynaTones starts at
 the users' next sign-in.
 
-Per user, `/MERGETASKS="adminfeatures"` adds the event log when the user running the setup is an administrator. Where
+Per user, `/FULL` sets up "Full" (event log and the screen before signing in, in one elevated pass) when the user running the setup is an administrator; without admin rights it is ignored and DynaTones is installed as "Basic". A new installation per user changes nothing until the user switches DynaTones on at its first start, or `DynaTones.exe --switch-on` is run as that user; a per-device installation and every update are switched on already. Where
 users are not, register the event log source once per device in the system context, for example as an Intune platform
 script:
 

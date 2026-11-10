@@ -4,6 +4,16 @@ All notable changes to DynaTones. Downloads will be on the [releases page](../..
 
 ## Not released yet
 
+- **The setup asks one question:** Basic, without admin rights, or Full, with admin rights, each with what it means
+  here. Without admin rights Full is greyed out and says why; while Full is chosen, Install shows the shield of
+  Windows. Full asks Windows once for the event log and the screen before signing in together, and DynaTones never
+  asks again afterwards. Basic can become Full later under Settings, General, **Set up fully**. The window is called
+  "Set up DynaTones", the box "Look for updates" says what it does, and "for all users" is only `/ALLUSERS` now
+- **DynaTones changes nothing until you switch it on.** A new installation starts with a short introduction (Welcome,
+  Place and pictures, Switch on); background and color mode stay as they are until **Switch DynaTones on**. **Look
+  around first** opens DynaTones as usual with a note and **Switch on** in the header. Installations from before are
+  switched on already: an update shows no introduction and changes nothing. `--switch-on` does the same from the
+  command line
 - **Every change of picture fades.** DynaTones mixes three frames between the two pictures and shows them over about a
   second, also for Next image, the jump to the next light or dark phase and Back to the plan. Windows' own fade could
   not be relied on: it depends on Windows' animation settings and did not show at all in Windows Sandbox. The color

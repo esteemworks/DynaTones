@@ -27,6 +27,9 @@ function Measure-Window($name) {
 }
 
 $exe = Install-App
+# A new installation waits to be switched on (kit STANDARD, "First start"); this test is about what comes after.
+Start-Process $exe -ArgumentList '--switch-on'
+Start-Sleep 3
 $data = "$env:APPDATA\DynaTones"
 # The first start (by the setup) finishes adding Lakeside and saving the settings before it is stopped.
 for ($i = 0; $i -lt 30 -and -not ((Test-Path "$data\bundled-packages.txt") -and (Test-Path "$data\config.json")); $i++) { Start-Sleep 1 }

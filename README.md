@@ -132,11 +132,18 @@ drawn from the app itself with `--snapshot` in Windows Sandbox, without real dat
 
 ## Download and install
 
-Download `DynaTones-Setup-<version>.exe` from the [latest release](../../releases/latest) and run it. It runs on Windows 11 and 10 and brings its own .NET. Wallpaper,
-color mode, mouse pointer and lock screen work without admin rights; the full feature set needs an installation with
-admin rights (one UAC prompt).
+Download `DynaTones-Setup-<version>.exe` from the [latest release](../../releases/latest) and run it. It runs on Windows 11 and 10 and brings its own .NET. The setup
+asks one question: **Basic, without admin rights** (wallpaper, color mode, mouse pointer and lock screen, for your
+account, Windows asks nothing) or **Full, with admin rights** (also the screen before signing in; Windows asks once,
+and DynaTones never asks again afterwards). Without admin rights on the PC, Basic is the one on offer. Who chose Basic
+can set up fully later under **Settings > General**.
 
-| | Installed with admin rights | Installed without |
+DynaTones changes nothing when it is installed. At the first start it shows you what it will do: your place, your
+pictures, light and dark with the day. Only when you click **Switch DynaTones on** does the background move to the
+picture for now. Or you **look around first**: everything works as usual, nothing changes in Windows, and what you set
+up stays for when you switch it on. An update never asks again and changes nothing in how DynaTones behaves.
+
+| | Full | Basic |
 | --- | --- | --- |
 | Wallpaper, color mode, mouse pointer, lock screen | yes | yes |
 | The screen before signing in follows the day | yes | not available |
@@ -146,7 +153,7 @@ admin rights (one UAC prompt).
 | Policies of the organization | read and respected | read and respected |
 
 With StartQueue installed, StartQueue starts DynaTones at sign-in; the switch Start with Windows then turns
-StartQueue's entry on and off. The event log can be set up later under **Settings > About > Troubleshooting**. A newer setup updates in place; your
+StartQueue's entry on and off. A newer setup updates in place; your
 packages and settings stay. Installed for you alone, DynaTones looks for a new version on GitHub once a day, when you
 leave the setup's box ticked; it shows it in the tray and under **Settings > About > Updates**, and installs it with
 one click (or by itself, if you switch that on). Uninstall through **Windows Settings > Apps**: start at sign-in and the program go, Windows
@@ -263,8 +270,8 @@ event log entries, what is on screen and the settings with the position rounded 
 decide whom you give it to.
 
 The log is `%APPDATA%\DynaTones\DynaTones.log`. Important events also go to the Windows event log (Application,
-source **DynaTones**) once it is set up: by the setup's admin option, offered to administrators, or with **Set up**
-under Troubleshooting. Both ask for admin rights once. The event ids and the same from the command line are in
+source **DynaTones**) once it is set up: by choosing **Full** in the setup, or later with **Set up fully** under
+Settings, General. Both ask for admin rights once. The event ids and the same from the command line are in
 [docs/ADMIN.md](docs/ADMIN.md#support).
 
 ## Build from source
@@ -287,7 +294,9 @@ network: night, the clock jumping to noon and dusk, a background set by someone 
 a policy that blocks the background, then the lock screen following the day and following a jump of the clock. Each step is checked against DynaTones' own plan. At the end it uninstalls DynaTones and checks that start at
 sign-in, the family entry and the program folder are gone and the settings stay. Results and screenshots land in
 `<folder>\results`. `-Test policy` checks the Group Policy templates in the policy editor and what DynaTones makes of
-each policy; `-Test log` installs with the admin option and checks the event log, diagnostics mode and the package;
+each policy; `-Test log` installs with Full and checks the event log, diagnostics mode and the package;
+`-Test firststart` installs three times, as an administrator with Basic, as a standard user and with Full, and checks
+that nothing changes in Windows before DynaTones is switched on, with pictures of the setup's page;
 `-Test gallery -Gallery <folder>` checks that "Lakeside" is on screen from the first start and adds packages from a
 gallery in a folder, also one whose download does not match; `-Test theme` opens the settings and switches Windows
 between light and dark underneath, checking that page and drop-down fields change together; `-Test update
@@ -299,9 +308,11 @@ Command line: `--show`, `--autostart`, `--plan <file> [package]` (today's plan a
 `--import-package <source> <file>` (imports an image package and writes what was suggested),
 `--gallery <file>` (the gallery's packages) and `--gallery-add <id> <file>` (adds one), `--next` (Next image in the running DynaTones), `--switch-mode` (the other color mode) and `--jump-mode` (the next phase of the other mode with its picture),
 `--export <file.zip>` and `--import <file.zip>` (the settings, see "Your settings" above),
-`--snapshot <folder>` (all pages as PNGs, off screen, screen by screen down to the end),
+`--snapshot <folder>` (all pages as PNGs, off screen, screen by screen down to the end; `--snapshot <folder> 1 intro`
+the introduction), `--switch-on` (as Switch DynaTones on at the end of the introduction),
 `--diagnostics [folder]`, `--diagnostics-mode on|off|<hours>`. For the setup:
-`--setup`, `--uninstall`, `--prepare-update`, `--updates on|off`; after its own update the app starts with
+`--setup [--admin] [--new]`, `--setup-admin`, `--uninstall`, `--prepare-update`, `--updates on|off`; the setup itself
+takes `/FULL` (Full in a silent installation) and `/ALLUSERS`; after its own update the app starts with
 `--updated`. `DYNATONES_UPDATE_FEED=<file or address>` stands in for the GitHub release in tests, and
 `DYNATONES_GALLERY=<folder or address>` for the gallery. With `DYNATONES_DRYRUN=1` DynaTones calculates and shows
 everything but changes nothing; `DYNATONES_DATA=<folder>` moves its data for tests.

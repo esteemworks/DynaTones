@@ -43,6 +43,8 @@ public partial class MainWindow : Window
         Closed += (_, _) => Engine.Updated -= ShowProfileColor;
         ShowProfileColor();
         RefreshBackground();
+        // A new installation: the introduction first; nothing changes in Windows until DynaTones is switched on.
+        StartIntro();
     }
 
     /// <summary>
@@ -623,9 +625,39 @@ public partial class MainWindow : Window
         Ui.Row(general, Strings.T("Language", "Sprache"), Strings.T("Takes effect when the window opens again.", "Gilt, wenn das Fenster neu geöffnet wird."),
             Locked(Ui.Choice(new[] { ((string?)null, Strings.T("Like Windows", "Wie Windows")), ("en", "English"), ("de", "Deutsch") },
                 config.Language, v => Change(c => c.Language = v), 200), Policies.Language), showHelp: true);
+        // Basic or Full, as chosen in the setup; Full later with one UAC prompt, and none after it (STANDARD "Full").
+        if (!KitApp.PerMachine)
+        {
+            FrameworkElement setup;
+            if (IsFull) setup = new TextBlock { Style = S("Value"), Text = Strings.T("Full", "Vollständig"), VerticalAlignment = VerticalAlignment.Center };
+            else
+            {
+                var shield = new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", FontSize = 13, Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center };
+                var full = new Button { Style = S("SecondaryButton"), Content = Ui.Horizontal(shield, new TextBlock { Text = Strings.T("Set up fully", "Vollständig einrichten"), VerticalAlignment = VerticalAlignment.Center }) }
+                    .Tip(Strings.T("Windows asks once for your confirmation. After that DynaTones does not ask again.",
+                        "Windows fragt einmal nach deiner Bestätigung. Danach fragt DynaTones nicht mehr."));
+                Speak(full, Strings.T("Set up fully", "Vollständig einrichten"));
+                full.Click += async (_, _) =>
+                {
+                    full.IsEnabled = false;
+                    await Task.Run(KitSetup.SetUpFull);
+                    SignIn.Recheck();
+                    BuildSettingsPage();
+                    BuildBackground();
+                };
+                setup = full;
+            }
+            Ui.Row(general, Strings.T("Set up", "Einrichtung"), IsFull
+                ? Strings.T("Full, with admin rights: also the screen before signing in changes with the day.",
+                    "Vollständig, mit Adminrechten: Auch der Bildschirm vor der Anmeldung wechselt mit dem Tag.")
+                : Strings.T("Basic, without admin rights. Fully set up, the screen before signing in changes with the day too.",
+                    "Basis, ohne Adminrechte. Vollständig eingerichtet wechselt auch der Bildschirm vor der Anmeldung mit dem Tag."), setup);
+        }
 
         BuildLocationCards(SettingsPanel);
         AboutPage.Build(SettingsPanel);
+        // The place chosen during the introduction shows on its step at once.
+        if (Frame.IntroStepId == "place") Frame.RefreshStep();
     }
 
     // ---------- Saving ----------

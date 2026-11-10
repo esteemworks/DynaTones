@@ -20,7 +20,10 @@ function Wait-Event([int]$Id, [int]$Seconds = 30) {
     return $false
 }
 
-$exe = Install-App -SetupArguments '/MERGETASKS="adminfeatures"'
+$exe = Install-App -SetupArguments '/FULL'
+# A new installation waits to be switched on (kit STANDARD, "First start"); this test is about what comes after.
+Start-Process $exe -ArgumentList '--switch-on'
+Start-Sleep 3
 function Run($arguments) { (Start-Process $exe -ArgumentList $arguments -WindowStyle Hidden -PassThru).WaitForExit() }
 $log = "$env:APPDATA\DynaTones\DynaTones.log"
 

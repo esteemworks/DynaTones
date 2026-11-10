@@ -151,7 +151,7 @@ public sealed class DayEngine : IDisposable
         {
             // Not DynaTones' to plan: Windows' own mode, apps and Windows together, as they are now for apps.
             var light = !(Appearance.AppsLight ?? true);
-            if (!DryRun) Appearance.Apply(light, light);
+            if (!DryRun && !KitIntro.Pending) Appearance.Apply(light, light);
             Log.Info($"Windows color mode {(light ? "light" : "dark")} by hand");
             Updated?.Invoke();
             return;
@@ -225,7 +225,9 @@ public sealed class DayEngine : IDisposable
             }
             Log.Debug($"Resolve ({reason}): image {Plan.Current?.Image.ToString() ?? "-"}, next {Plan.Next?.Start.ToString("dd.MM. HH:mm") ?? "-"}, dark {Plan.Dark?.ToString() ?? "-"}, position {Position?.Source.ToString() ?? "none"}", "Engine");
             var paused = Config.PausedUntil is { } until && until > now;
-            if ((!paused || byHand) && !DryRun)
+            // A new installation changes nothing in Windows until the user switched it on at the end of the
+            // introduction (kit KitIntro, STANDARD.md "First start"); the plan is shown all the same.
+            if ((!paused || byHand) && !DryRun && !KitIntro.Pending)
             {
                 // At start the color mode first: a registry value, on screen at once. Otherwise the background first: when it
                 // fades (QuickFade), the color mode changes halfway through, so both change together.
@@ -241,7 +243,11 @@ public sealed class DayEngine : IDisposable
                 ApplySignIn();
             }
             ScheduleNext(paused ? Config.PausedUntil : Plan.NextChange);
-            if (reason == "start") LogStart();
+            if (reason == "start")
+            {
+                if (KitIntro.Pending) Log.Info("Not switched on yet: nothing applied at start");
+                else LogStart();
+            }
         }
         catch (Exception ex)
         {

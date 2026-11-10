@@ -31,6 +31,10 @@ static class Snapshot
         scale = args.Length > 3 && double.TryParse(args[3], System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var s) && s is > 0 and <= 8 ? s : 0;
         Directory.CreateDirectory(folder);
+        // `--snapshot <folder> <scale> intro`: the introduction of a new installation and looking around, in this
+        // process only (nothing is written to the data folder).
+        var intro = args.Length > 4 && args[4] == "intro";
+        if (intro) KitIntro.ForSnapshot = true;
         var host = new TrayHost(showWindow: false, dryRun: true);
         var window = new MainWindow(host)
         {
@@ -45,6 +49,34 @@ static class Snapshot
         app.Dispatcher.BeginInvoke(async () =>
         {
             await Task.Delay(1500);
+            if (intro)
+            {
+                foreach (var (theme, mode) in new[] { (ThemeChoice.Light, "light"), (ThemeChoice.Dark, "dark") })
+                {
+                    Theme.Apply(theme, AccentChoice.Brand);
+                    foreach (var (index, name) in new[] { (0, "welcome"), (1, "place"), (2, "ready"), (-1, "looking") })
+                    {
+                        window.ShowIntroForSnapshot(index);
+                        await Task.Delay(500);
+                        await PicturesRead();
+                        window.UpdateLayout();
+                        Save(window, Path.Combine(folder, $"intro-{name}-{mode}.png"));
+                        var introScroller = Scrollers(window).FirstOrDefault(v => v.IsVisible && v.ScrollableHeight > 0);
+                        if (introScroller != null)
+                        {
+                            introScroller.ScrollToEnd();
+                            await Task.Delay(300);
+                            await PicturesRead();
+                            window.UpdateLayout();
+                            Save(window, Path.Combine(folder, $"intro-{name}-end-{mode}.png"));
+                            introScroller.ScrollToHome();
+                        }
+                    }
+                }
+                host.Dispose();
+                app.Shutdown();
+                return;
+            }
             // `--snapshot <folder> <scale> accents`: every page with each accent of the settings, named <page>-<accent>-<mode>.
             var accents = args.Length > 4 && args[4] == "accents" ? [.. EsteemWorks.Kit.UI.AccentRow.Choices(profiles: true)] : new[] { AccentChoice.Brand };
             foreach (var accent in accents)
