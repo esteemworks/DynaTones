@@ -1,8 +1,10 @@
 # Runs inside Windows Sandbox: the setup's page "Basic or Full" and the first start (kit STANDARD, "First start").
-# Three new installations one after the other, each checked for leaving Windows as it was until DynaTones is switched on:
+# Four new installations one after the other, each checked for leaving Windows as it was until DynaTones is switched on:
 #   1. an administrator choosing Basic: the page, no admin tier, the introduction, nothing changed, then --switch-on
 #   2. a standard user: "Full" greyed out on the page, /FULL ignored, Basic in that user's profile
 #   3. an administrator choosing Full (/FULL): event log and sign-in screen in one elevated pass, still nothing changed
+#   4. Basic, then "Set up fully" (--setup-full): one elevated pass
+# and counts the UAC prompts: Basic 0, Full 1, Set up fully 1, none while it runs, uninstalling Basic 0 and Full 1.
 # Results and pictures of the setup's page and the introduction go to C:\dt\results.
 # run-sandbox.ps1 -Test firststart maps this script (as test.ps1), SandboxKit.ps1 and setup.exe to C:\dt.
 . "$PSScriptRoot\SandboxKit.ps1"
@@ -115,16 +117,10 @@ Test-Check '1 switched on: the day is on screen' ($on -ne $before -and -not (Tes
 Save-Screen '1-switched-on'
 Test-Check '1 Basic: no UAC prompt' ((Prompts) -eq 0) "$(Prompts) elevated starts"
 
-# "Set up fully" under Settings, General (the same as --setup-full): one UAC prompt for all of Full.
-(Start-Process $exe -ArgumentList '--setup-full' -PassThru).WaitForExit()
-Test-Check '1 Set up fully: one UAC prompt' ((Prompts) -eq 1) "$(Prompts) elevated starts"
-Test-Check '1 Set up fully: event log source' (Test-Path $source)
-schtasks /query /tn '\EsteemWorks\DynaTones sign-in screen now' 2>$null | Out-Null
-Test-Check '1 Set up fully: sign-in screen task' ($LASTEXITCODE -eq 0)
-Use-Awhile
-Test-Check '1 afterwards no UAC prompt while it runs' ((Prompts) -eq 1) "$(Prompts) elevated starts"
-
+# Uninstalling Basic asks nothing.
+$prompts = Prompts
 Uninstall-App
+Test-Check '1 uninstalling Basic: no UAC prompt' ((Prompts) -eq $prompts) "$((Prompts) - $prompts) elevated starts"
 Get-Process DynaTones -ErrorAction SilentlyContinue | Stop-Process -Force
 Remove-Item $data -Recurse -Force -ErrorAction SilentlyContinue
 
@@ -174,5 +170,30 @@ Start-Sleep 10
 Use-Awhile
 Test-Check '3 afterwards no UAC prompt while it runs' ((Prompts) -eq 1) "$(Prompts) elevated starts"
 
+
+# Uninstalling Full: one elevated pass for the event log and the sign-in screen together.
+$prompts = Prompts
 Uninstall-App
+Test-Check '3 uninstalling Full: one UAC prompt' ((Prompts) - $prompts -eq 1) "$((Prompts) - $prompts) elevated starts"
+Test-Check '3 uninstalled: event log source and task gone' (-not (Test-Path $source) -and -not (schtasks /query /fo csv /nh 2>$null | Select-String 'DynaTones sign-in screen'))
+Get-Process DynaTones -ErrorAction SilentlyContinue | Stop-Process -Force
+Remove-Item $data -Recurse -Force -ErrorAction SilentlyContinue
+
+# ---------- 4. Basic, then "Set up fully" ----------
+
+Install
+Start-Process $exe -ArgumentList '--switch-on'
+Start-Sleep 10
+Test-Check '4 Basic: no UAC prompt' ((Prompts) -eq 0) "$(Prompts) elevated starts"
+# "Set up fully" under Settings, General (the same as --setup-full): one UAC prompt for all of Full.
+(Start-Process $exe -ArgumentList '--setup-full' -PassThru).WaitForExit()
+Test-Check '4 Set up fully: one UAC prompt' ((Prompts) -eq 1) "$(Prompts) elevated starts"
+Test-Check '4 Set up fully: event log source' (Test-Path $source)
+schtasks /query /tn '\EsteemWorks\DynaTones sign-in screen now' 2>$null | Out-Null
+Test-Check '4 Set up fully: sign-in screen task' ($LASTEXITCODE -eq 0)
+Use-Awhile
+Test-Check '4 afterwards no UAC prompt while it runs' ((Prompts) -eq 1) "$(Prompts) elevated starts"
+$prompts = Prompts
+Uninstall-App
+Test-Check '4 uninstalling: one UAC prompt' ((Prompts) - $prompts -eq 1) "$((Prompts) - $prompts) elevated starts"
 Complete-SandboxTest

@@ -48,7 +48,9 @@ public partial class App : Application
         // The admin tier ("Full") also sets up the sign-in screen (SignIn: two SYSTEM tasks and their folders), in the
         // same elevated pass as the event log, so Windows asks once (--setup-admin).
         // --setup --new marks a new installation: nothing changes in Windows until DynaTones is switched on (KitIntro).
-        if (KitSetup.TryRun(args, uninstall: GiveBack, adminSetup: SignIn.Install) || KitDiagnostics.TryRun(args) ||
+        // Uninstalling takes the sign-in screen away in the same single elevated pass as the event log (--uninstall-admin).
+        if (KitSetup.TryRun(args, uninstall: GiveBack, adminSetup: SignIn.Install, adminUninstall: SignIn.Uninstall, adminUninstallNeeded: SignIn.NeedsRemoval) ||
+            KitDiagnostics.TryRun(args) ||
             KitUpdate.TryRun(args) || KitSettings.TryRun(args))
         {
             Shutdown();
@@ -177,8 +179,8 @@ public partial class App : Application
     {
         var lockScreen = ConfigStore.Load().LockScreen;
         if (lockScreen.TurnOffSpotlight) LockScreen.SetSpotlight(lockScreen.SpotlightBefore);
-        // The sign-in screen: the tasks go and the device's values come back as they were (asks for admin rights once).
-        SignIn.Remove();
+        // The sign-in screen goes in the kit's elevated pass after this (adminUninstall): the tasks go and the device's
+        // values come back as they were.
     }
 
     protected override void OnExit(ExitEventArgs e)

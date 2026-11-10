@@ -68,13 +68,11 @@ foreach ($size in $large) {
     $center = New-Object Drawing.StringFormat; $center.Alignment = 'Center'
     $title = New-Object Drawing.Font 'Segoe UI Black', ([float](25 * $s)), ([Drawing.FontStyle]::Regular), ([Drawing.GraphicsUnit]::Pixel)
     $g.DrawString('DynaTones', $title, (New-Object Drawing.SolidBrush (C '#FFFFFF')), (New-Object Drawing.RectangleF 0, ([float]($top + $tile + 14 * $s)), $w, ([float](40 * $s))), $center)
-    $line = New-Object Drawing.Font 'Segoe UI', ([float](12.5 * $s)), ([Drawing.FontStyle]::Regular), ([Drawing.GraphicsUnit]::Pixel)
-    $g.DrawString("Your desktop goes`nwith the day.", $line, (New-Object Drawing.SolidBrush (C '#CFCFCF')), (New-Object Drawing.RectangleF 0, ([float]($top + $tile + 50 * $s)), $w, ([float](40 * $s))), $center)
-
+    # No sentence: the picture is the same in every language, the text of the page beside it says what is needed.
     # The day: the sun's arc over the pictures, as on DynaTones' page Background.
     $left = 22 * $s; $width = $w - 2 * $left
-    $stripTop = $h - 0.24 * $h; $stripH = 0.085 * $h
-    $arcTop = $top + $tile + 104 * $s; $arcBottom = $stripTop - 14 * $s
+    $stripTop = $h - 0.2 * $h; $stripH = 0.085 * $h
+    $arcTop = $top + $tile + 78 * $s; $arcBottom = $stripTop - 14 * $s
     $points = foreach ($i in 0..60) {
         $x = $left + $width * $i / 60
         $y = $arcBottom - ($arcBottom - $arcTop) * [Math]::Max([double]0, [Math]::Sin(($i / 60) * [Math]::PI * 1.25 - [Math]::PI * 0.125))
@@ -103,8 +101,6 @@ foreach ($size in $large) {
         $g.FillPath((New-Object Drawing.SolidBrush (C '#000000' 90)), $hill)
         $g.ResetClip()
     }
-    $times = New-Object Drawing.Font 'Segoe UI', ([float](9.5 * $s)), ([Drawing.FontStyle]::Regular), ([Drawing.GraphicsUnit]::Pixel)
-    $g.DrawString('Night to night, with the sun at your place', $times, (New-Object Drawing.SolidBrush (C '#9A9A9A')), (New-Object Drawing.RectangleF 0, ([float]($stripTop + $stripH + 10 * $s)), $w, ([float](20 * $s))), $center)
 
     # The family's brand line at the bottom edge.
     $bar = New-Object Drawing.RectangleF 0, ([float]($h - 4 * $s)), $w, ([float](4 * $s))

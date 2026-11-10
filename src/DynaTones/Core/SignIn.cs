@@ -135,10 +135,13 @@ public static class SignIn
         else RunElevated(InstallCommand);
     }
 
-    /// <summary>From uninstall: takes it away again, elevated, but only when it was set up.</summary>
+    /// <summary>Something of it is set up (folders or the task), so uninstalling has to take it away with admin rights.</summary>
+    public static bool NeedsRemoval() => Directory.Exists(Protected) || TaskExists(TaskNow);
+
+    /// <summary>Takes it away again, elevated, but only when it was set up.</summary>
     public static void Remove()
     {
-        if (!Directory.Exists(Protected) && !TaskExists(TaskNow)) return;
+        if (!NeedsRemoval()) return;
         if (IsElevated) Uninstall();
         else RunElevated(UninstallCommand);
     }
