@@ -6,6 +6,12 @@ All notable changes to DynaTones. Downloads will be on the [releases page](../..
 
 - **Calmer colors:** switches and radio buttons in one solid tone; the gradient stays in the bar below the header
   and on the main button. Menus grow out of the button they open from
+- **The keyboard, as in every EsteemWorks app:** the tabs and the segments in the settings are one Tab stop each, the
+  arrow keys move and choose, Home and End jump; menus opened from the keyboard highlight their first entry and take
+  Home, End and a letter; a question about deleting puts the focus on Cancel first, Tab stays inside it, and the
+  focus goes back where it was. A setting's explanation also shows when its control gets the keyboard focus
+- **Notifications:** Undo after deleting is one of several that can show at once; the time stops while the pointer is
+  on them or the window is in the background, and F6 moves to them and back
 - **The setup asks one question:** Basic, without admin rights, or Full, with admin rights, each with what it means
   here. Without admin rights Full is greyed out and says why; while Full is chosen, Install shows the shield of
   Windows. Full asks Windows once for the event log and the screen before signing in together, and DynaTones never
