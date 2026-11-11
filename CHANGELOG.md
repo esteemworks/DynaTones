@@ -4,6 +4,8 @@ All notable changes to DynaTones. Downloads will be on the [releases page](../..
 
 ## Not released yet
 
+- **Calmer colors:** switches and radio buttons in one solid tone; the gradient stays in the bar below the header
+  and on the main button. Menus grow out of the button they open from
 - **The setup asks one question:** Basic, without admin rights, or Full, with admin rights, each with what it means
   here. Without admin rights Full is greyed out and says why; while Full is chosen, Install shows the shield of
   Windows. Full asks Windows once for the event log and the screen before signing in together, and DynaTones never
