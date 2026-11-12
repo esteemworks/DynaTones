@@ -4,6 +4,12 @@ All notable changes to DynaTones. Downloads will be on the [releases page](../..
 
 ## Not released yet
 
+- **Explorer no longer flickers during a flowing transition.** With Windows' "accent color from the background" on,
+  Windows worked out a new accent for every picture in between, once a minute, and told every window; Explorer in
+  dark mode then flashed its scroll bars. While pictures in between show, DynaTones now switches that automatic off
+  and on again right before the target picture, so Windows works out the accent once, from the picture it is meant
+  for. Only when it was on; it goes back on with the target picture, on pausing, on quitting and at the next start
+  if DynaTones ended in the middle. Each change is a line in the log
 - **The settings as in every EsteemWorks app:** one calm column, a name above each group (General, Location, About
   DynaTones, More from EsteemWorks), and every row with an icon, a short line saying what it does and one control.
   The accent color is a choice field. Updates, Back up settings, Troubleshooting and Privacy open pages of their own;

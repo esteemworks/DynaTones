@@ -59,6 +59,8 @@ public sealed class DayEngine : IDisposable
     public async Task StartAsync()
     {
         Reload();
+        // DynaTones ended while pictures in between showed: the accent color from the background goes back on.
+        AccentHold.Release("start after an end in the middle");
         SystemEvents.PowerModeChanged += OnPower;
         SystemEvents.SessionSwitch += OnSession;
         SystemEvents.TimeChanged += OnTime;
@@ -225,6 +227,8 @@ public sealed class DayEngine : IDisposable
             }
             Log.Debug($"Resolve ({reason}): image {Plan.Current?.Image.ToString() ?? "-"}, next {Plan.Next?.Start.ToString("dd.MM. HH:mm") ?? "-"}, dark {Plan.Dark?.ToString() ?? "-"}, position {Position?.Source.ToString() ?? "none"}", "Engine");
             var paused = Config.PausedUntil is { } until && until > now;
+            // Nothing in between shows while paused or not switched on: Windows' automatic accent back on.
+            if ((paused && !byHand) || KitIntro.Pending) AccentHold.Release(paused ? "paused" : "not switched on");
             // A new installation changes nothing in Windows until the user switched it on at the end of the
             // introduction (kit KitIntro, STANDARD.md "First start"); the plan is shown all the same.
             if ((!paused || byHand) && !DryRun && !KitIntro.Pending)
@@ -274,7 +278,11 @@ public sealed class DayEngine : IDisposable
 
     void ApplyWallpaper(string reason)
     {
-        if (!Config.Wallpaper.Enabled || Package == null || Plan?.Current is not { } slot) return;
+        if (!Config.Wallpaper.Enabled || Package == null || Plan?.Current is not { } slot)
+        {
+            AccentHold.Release("background off");
+            return;
+        }
         if (Wallpaper.Blocked() is { } blocked)
         {
             Problem = blocked;
@@ -320,6 +328,9 @@ public sealed class DayEngine : IDisposable
         // A different image while ours should be there: someone else set it. Worth a line in the log.
         var foreign = (reason == "check" || reason == "preference") && !shown.Values.All(Blend.IsStep);
         var before = shown.Values.FirstOrDefault(Blend.IsStep);
+        // A picture in between: Windows works out no accent from it. The picture itself: once, from it (AccentHold).
+        if (step != null) AccentHold.Hold("flowing transition");
+        else AccentHold.Release("target picture");
         if (Wallpaper.Set(path, Config.Wallpaper.Fit, Transitions.Effective(Config.Wallpaper, Package).Fade))
         {
             LastWallpaperChange = DateTime.Now;
@@ -386,6 +397,7 @@ public sealed class DayEngine : IDisposable
             var mixed = watch.ElapsedMilliseconds;
             if (!done.IsFaulted)
             {
+                AccentHold.Hold("fade");
                 for (var n = 0; n < frames.Count; n++)
                 {
                     Wallpaper.Set(frames[n].Path, fit, fade: true);
@@ -397,6 +409,7 @@ public sealed class DayEngine : IDisposable
             {
                 Log.Warning($"Fading to {Path.GetFileName(to)} could not be mixed: {done.Exception?.GetBaseException().Message}");
             }
+            AccentHold.Release("target picture");
             if (Wallpaper.Set(to, fit, fade: true))
             {
                 LastWallpaperChange = DateTime.Now;
@@ -623,6 +636,7 @@ public sealed class DayEngine : IDisposable
     public void Dispose()
     {
         disposed = true;
+        AccentHold.Release("quit");
         exact.Stop();
         minute.Stop();
         SystemEvents.PowerModeChanged -= OnPower;

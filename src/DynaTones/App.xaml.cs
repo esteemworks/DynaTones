@@ -24,6 +24,11 @@ public partial class App : Application
         EsteemWorks.Kit.UI.AboutPage.Notices.Add((
             "Place names: GeoNames (geonames.org), licensed CC BY 4.0.",
             "Ortsnamen: GeoNames (geonames.org), Lizenz CC BY 4.0."));
+        // What DynaTones changes in Windows besides background, lock screen, color mode and pointer: Leon wanted it
+        // where one can read it (Privacy and notices), 12.11.2026 (see Core/AccentHold.cs).
+        EsteemWorks.Kit.UI.AboutPage.Rows.Add(("", "Accent color while pictures change", "Akzentfarbe beim Bildwechsel",
+            "When Windows takes the accent color from the background, DynaTones switches that off while the pictures in between of a transition show, and on again with the target picture. Otherwise Windows would recolor every window once a minute and Explorer would flicker. Each change is in the log.",
+            "Nimmt Windows die Akzentfarbe aus dem Hintergrund, schaltet DynaTones das aus, solange die Zwischenbilder eines Übergangs laufen, und mit dem Zielbild wieder ein. Sonst würde Windows jede Minute alle Fenster neu einfärben und der Explorer flackern. Jede Änderung steht im Protokoll."));
         EsteemWorks.Kit.UI.AboutPage.Notices.Add((
             "Map: Natural Earth (naturalearthdata.com), public domain.",
             "Karte: Natural Earth (naturalearthdata.com), gemeinfrei."));
