@@ -81,6 +81,8 @@ Test-Check 'pages drawn' ($pictures.Count -ge 20) "$($pictures.Count) pictures"
 foreach ($name in 'background-light', 'background-dark', 'mode-light', 'profiles-light', 'settings-dark', 'gallery-light') {
     Test-Check "picture $name" (Test-Path "$shots\$name.png")
 }
+# The tray menu, drawn at the screen's size and at 150 percent (KitTray.SaveMenuPicture).
+Test-Check 'tray menu drawn at 150 percent' (Test-Path "$shots\tray-150-light.png")
 # The start page fits the window at its normal size (kit STANDARD, section 4: no -end picture of it).
 Test-Check 'Background fits without scrolling' (-not (Test-Path "$shots\background-end-light.png"))
 # The introduction of a new installation, in this process only (nothing is written).

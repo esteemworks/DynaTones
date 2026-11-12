@@ -158,6 +158,8 @@ static class Snapshot
                 window.UpdateLayout();
                 Save(window, Path.Combine(folder, $"dialog-{suffix}.png"));
                 window.ShowSampleDialog(false);
+                // The tray menu, drawn without opening it, at the screen's size and at 150 percent.
+                host.SaveTrayPictures(folder, suffix);
             }
             host.Dispose();
             app.Shutdown();

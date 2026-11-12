@@ -4,6 +4,11 @@ All notable changes to DynaTones. Downloads will be on the [releases page](../..
 
 ## Not released yet
 
+- **A new tray menu, as the family's:** a head with DynaTones' tile, its name and what holds now ("Light mode, next
+  change at 14:50"), a click on it opens the window; then the day's actions with icons (Update now, Next image,
+  Switch to dark, Jump to the next dark phase), Pause with its state at the right ("Running", "until 15:00"), and Quit.
+  Rounded, light and dark, and by keyboard: Win+B, the arrow keys to DynaTones, then Enter or Shift+F10; the arrow
+  keys, Home, End and a letter move, Right opens Pause, Esc closes
 - **One main button per view, quieter everywhere else.** Add package in the header is the window's one main button;
   in the gallery every Add, on a package's page Use for the desktop, and in the profile editor the header's button
   step back, so Save is the editor's one. Next image and Switch to dark under The day are quiet text buttons with an

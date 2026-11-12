@@ -7,9 +7,9 @@ namespace DynaTones.UI;
 /// <summary>The app while it runs: the engine, the tray icon, the message pipe and, when open, the window.</summary>
 public sealed class TrayHost : IDisposable
 {
-    readonly KitTray? tray;
+    KitTray? tray;
     readonly Ipc.Server? server;
-    readonly System.Windows.Forms.ToolStripMenuItem? switchItem, jumpItem;
+    TrayEntry? updateItem, nextItem, switchItem, jumpItem, pauseItem;
     public DayEngine Engine { get; }
     MainWindow? window;
 
@@ -36,20 +36,7 @@ public sealed class TrayHost : IDisposable
         {
             tray = new KitTray(ShowWindow);
             KitUpdate.Notify = tray.Notify;
-            tray.Add(Strings.T("Update now", "Jetzt aktualisieren"), () =>
-            {
-                Engine.Reload();
-                Engine.Resolve("request");
-            });
-            tray.Add(Strings.T("Next image", "Nächstes Bild"), () => Engine.SkipNext());
-            // The color mode: the other one now, or the whole next phase with its image; the words follow the mode.
-            switchItem = tray.Add(Strings.T("Switch to dark", "Auf Dunkel umschalten"), () => Engine.SwitchMode());
-            jumpItem = tray.Add(Strings.T("Jump to the next dark phase", "Zur nächsten dunklen Phase springen"), () => Engine.JumpToMode());
-            tray.AddMenu(Strings.T("Pause", "Pausieren"),
-                (Strings.T("For an hour", "Für eine Stunde"), () => Pause(DateTime.Now.AddHours(1))),
-                (Strings.T("Until tomorrow morning", "Bis morgen früh"), () => Pause(TomorrowMorning)),
-                (Strings.T("Until I resume", "Bis ich fortsetze"), () => Pause(Forever)),
-                (Strings.T("Resume", "Fortsetzen"), () => Pause(null)));
+            FillTray(tray);
             UpdateTray();
             server = new Ipc.Server(message => Application.Current.Dispatcher.BeginInvoke(() => Handle(message)));
             // After an import or restore under About, "Backup and restore".
@@ -61,6 +48,46 @@ public sealed class TrayHost : IDisposable
         }
         _ = start;
         if (showWindow) ShowWindow();
+    }
+
+    /// <summary>The app's entries in the family's tray menu.</summary>
+    void FillTray(KitTray tray)
+    {
+        // The family's tray menu (kit KitTray): the head opens the window and says what holds now; then what the
+        // day does, Pause with its state at the right, and Quit (the kit's).
+        updateItem = tray.Add(Strings.T("Update now", "Jetzt aktualisieren"), () =>
+        {
+            Engine.Reload();
+            Engine.Resolve("request");
+        }, "");
+        nextItem = tray.Add(Strings.T("Next image", "Nächstes Bild"), () => Engine.SkipNext(), "");
+        // The color mode: the other one now, or the whole next phase with its image; the words follow the mode.
+        switchItem = tray.Add(Strings.T("Switch to dark", "Auf Dunkel umschalten"), () => Engine.SwitchMode(), "");
+        jumpItem = tray.Add(Strings.T("Jump to the next dark phase", "Zur nächsten dunklen Phase springen"), () => Engine.JumpToMode(), "");
+        tray.AddSeparator();
+        pauseItem = tray.AddMenu(Strings.T("Pause", "Pausieren"), "",
+            (Strings.T("For an hour", "Für eine Stunde"), () => Pause(DateTime.Now.AddHours(1))),
+            (Strings.T("Until tomorrow morning", "Bis morgen früh"), () => Pause(TomorrowMorning)),
+            (Strings.T("Until I resume", "Bis ich fortsetze"), () => Pause(Forever)),
+            (Strings.T("Resume", "Fortsetzen"), () => Pause(null)));
+    }
+
+    /// <summary>
+    /// For --snapshot: the tray menu as pictures at the screen's size and at 150 percent, with the menu as it is now;
+    /// a tray icon shows for the moment it takes.
+    /// </summary>
+    internal void SaveTrayPictures(string folder, string suffix)
+    {
+        var own = tray == null;
+        tray ??= new KitTray(ShowWindow);
+        if (own) FillTray(tray);
+        UpdateTray();
+        tray.SaveMenuPicture(Path.Combine(folder, $"tray-100-{suffix}.png"), 1);
+        tray.SaveMenuPicture(Path.Combine(folder, $"tray-150-{suffix}.png"), 1.5);
+        if (!own) return;
+        tray.Dispose();
+        tray = null;
+        updateItem = nextItem = switchItem = jumpItem = pauseItem = null;
     }
 
     void Handle(string message)
@@ -134,12 +161,23 @@ public sealed class TrayHost : IDisposable
         if (tray == null) return;
         // Not switched on yet: nothing changes, so the tray says so and offers no color mode.
         var off = KitIntro.Pending;
-        tray.Status = off ? Strings.T("Not switched on yet", "Noch nicht eingeschaltet")
-            : Engine.Plan?.NextAnnounced is { } next ? Strings.T("Next change at ", "Nächster Wechsel um ") + Strings.Time(next) : "";
         var plan = Engine.Plan;
+        var paused = Engine.Settings.PausedUntil is { } until && until > DateTime.Now;
+        tray.Status = TrayStatus(off, paused, plan, Engine.Settings);
+        if (updateItem != null) updateItem.Visible = !off;
+        if (nextItem != null) nextItem.Enabled = !off && plan?.Next != null && Engine.Settings.Wallpaper.Enabled;
+        if (nextItem != null) nextItem.Visible = !off;
+        if (pauseItem != null)
+        {
+            pauseItem.Visible = !off;
+            pauseItem.Value = !paused ? Strings.T("Running", "Läuft")
+                : IsForever(Engine.Settings.PausedUntil) ? Strings.T("until you resume", "bis du fortsetzt")
+                : Strings.T($"until {Strings.Time(Engine.Settings.PausedUntil!.Value)}", $"bis {Strings.Time(Engine.Settings.PausedUntil!.Value)}");
+        }
         if (switchItem != null)
         {
             switchItem.Text = SwitchText(plan);
+            switchItem.Icon = (plan?.Dark ?? Appearance.AppsLight == false) ? "" : "";
             switchItem.Visible = !off;
         }
         if (jumpItem != null)
@@ -147,6 +185,27 @@ public sealed class TrayHost : IDisposable
             jumpItem.Text = JumpText(plan);
             jumpItem.Visible = !off && plan?.Dark != null && (plan.ModeHeld || plan.NextModeChange != null);
         }
+    }
+
+    /// <summary>
+    /// The menu's head and the icon's tooltip in one short sentence, as the window's header says it: "Light mode, next
+    /// change at 14:50", "Paused until 15:00". Windows cuts the tooltip at 63 characters, so no more than that.
+    /// </summary>
+    public static string TrayStatus(bool off, bool paused, Plan? plan, Config settings)
+    {
+        if (off) return Strings.T("Not switched on yet", "Noch nicht eingeschaltet");
+        if (paused)
+            return IsForever(settings.PausedUntil)
+                ? Strings.T("Paused until you resume", "Pausiert, bis du fortsetzt")
+                : Strings.T($"Paused until {Strings.Time(settings.PausedUntil!.Value)}", $"Pausiert bis {Strings.Time(settings.PausedUntil!.Value)}");
+        var parts = new List<string>();
+        if (plan?.Dark is { } dark) parts.Add(dark ? Strings.T("Dark mode", "Dunkler Modus") : Strings.T("Light mode", "Heller Modus"));
+        if (plan?.NextAnnounced is { } next)
+        {
+            var at = next.Date == DateTime.Today ? Strings.Time(next) : $"{next.ToString("ddd", Strings.Culture)} {Strings.Time(next)}";
+            parts.Add(parts.Count == 0 ? Strings.T($"Next change at {at}", $"Nächster Wechsel um {at}") : Strings.T($"next change at {at}", $"nächster Wechsel um {at}"));
+        }
+        return string.Join(", ", parts);
     }
 
     /// <summary>"Switch to dark" or "light": the mode not shown now; without DynaTones' color mode, Windows' own.</summary>
