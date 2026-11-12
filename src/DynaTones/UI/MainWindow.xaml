@@ -15,15 +15,6 @@
              gear, the brand line. Tabs are added in code (MainWindow.xaml.cs); the pages below are the frame's. -->
         <kit:KitFrame x:Name="Frame">
             <kit:KitFrame.Actions>
-                <!-- Refresh is a small icon: DynaTones keeps the screen right by itself, this is for when it could not -->
-                <Button x:Name="RefreshButton" Style="{StaticResource HeroButton}" Click="Refresh_Click" Margin="0,0,8,0" Width="32" Padding="0">
-                    <!-- Turns while it works, at least once, as StartQueue's Check (Motion.SpinWhile) -->
-                    <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE72C;" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
-                        <TextBlock.RenderTransform>
-                            <RotateTransform x:Name="RefreshTurn" />
-                        </TextBlock.RenderTransform>
-                    </TextBlock>
-                </Button>
                 <!-- Pause opens how long (its menu, kit KitMenuButton, which draws the chevron); while paused Resume
                      takes its place: a button acts or opens, never both (design system, "Menu buttons") -->
                 <Button x:Name="PauseButton" Style="{StaticResource HeroButton}" Margin="0,0,8,0">

@@ -31,9 +31,12 @@ public partial class MainWindow : Window
         Frame.PageChanged += PageChanged;
         _ = new MiddleScroll(this, ScrollMarker);
         dialog = new KitDialog(DialogLayer);
-        // The keys are the frame's, as in every family app (kit round C): F5 updates, Ctrl+N opens Add package, Esc
+        // The keys are the frame's, as in every family app (kit round C): F5 checks, Ctrl+N opens Add package, Esc
         // closes the settings; pages (KitSubpage) and open lists take Esc first. While a question is open, the keys are its.
-        Frame.Refresh = () => Refresh_Click(this, new RoutedEventArgs());
+        // Check is the family's "Check now" (kit round D): the icon turns, F5 does the same, a notification says what changed.
+        Frame.AddCheck(Strings.T(
+            "Check now: reads the settings and the location again and puts everything right for this moment. DynaTones does this by itself; this is for when something else got in the way.",
+            "Jetzt prüfen: liest Einstellungen und Standort neu und setzt alles so, wie es jetzt sein soll. Das macht DynaTones von selbst; das hier ist für den Fall, dass etwas dazwischenkam."), CheckAsync);
         Frame.New = () => KitMenuButton.Toggle(AddButton, fromKeyboard: true, last: false);
         Frame.KeysBlocked = () => dialog.IsOpen;
         // A package waiting for Undo is really deleted when the window goes.
@@ -105,10 +108,6 @@ public partial class MainWindow : Window
         TabProfiles.Content = Strings.T("Profiles", "Profile");
         Frame.ApplyTexts();
         // Names for screen readers: icon buttons and buttons made of an icon and a text get none from WPF.
-        RefreshButton.ToolTip = Strings.T(
-            "Update now (F5): reads the settings and the location again and puts everything right for this moment. DynaTones does this by itself; this is for when something else got in the way.",
-            "Jetzt aktualisieren (F5): liest Einstellungen und Standort neu und setzt alles so, wie es jetzt sein soll. Das macht DynaTones von selbst; das hier ist für den Fall, dass etwas dazwischenkam.");
-        Speak(RefreshButton, Strings.T("Update now", "Jetzt aktualisieren"));
         Speak(AddButton, AddButtonText.Text);
         PauseButton.ToolTip = Strings.T(
             "Stops changing the background and the color mode for a while; what is on screen stays.",
@@ -134,12 +133,32 @@ public partial class MainWindow : Window
     /// <summary>The name a screen reader reads for <paramref name="element"/>.</summary>
     static void Speak(DependencyObject element, string name) => System.Windows.Automation.AutomationProperties.SetName(element, name);
 
-    void Refresh_Click(object sender, RoutedEventArgs e) => _ = Motion.SpinWhile(RefreshTurn, () =>
+    /// <summary>
+    /// Check now (kit KitFrame.AddCheck, also F5): settings and location read again, everything put right for this
+    /// moment. Says what changed on screen; nothing, and the kit says "Checked everything, nothing new."
+    /// </summary>
+    Task<IReadOnlyList<string>> CheckAsync()
     {
+        var before = Shown();
         Engine.Reload();
         Engine.Resolve("request");
-        return Task.CompletedTask;
-    });
+        var after = Shown();
+        var found = new List<string>();
+        if (after.Desktop != null && after.Desktop != before.Desktop) found.Add(Strings.T($"Desktop: {after.Desktop}", $"Desktop: {after.Desktop}"));
+        if (after.Lock != null && after.Lock != before.Lock) found.Add(Strings.T($"Lock screen: {after.Lock}", $"Sperrbildschirm: {after.Lock}"));
+        if (after.Dark is { } dark && after.Dark != before.Dark) found.Add(dark ? Strings.T("Dark mode now", "Jetzt dunkel") : Strings.T("Light mode now", "Jetzt hell"));
+        if (after.Place != null && after.Place != before.Place) found.Add(Strings.T($"Location: {after.Place}", $"Standort: {after.Place}"));
+        if (after.Problem != null && after.Problem != before.Problem) found.Add(after.Problem);
+        return Task.FromResult<IReadOnlyList<string>>(found);
+
+        (string? Desktop, string? Lock, bool? Dark, string? Place, string? Problem) Shown()
+        {
+            var plan = Engine.Plan;
+            static string? Name(Package? package, int? index) =>
+                package != null && index is { } i && i >= 0 && i < package.Images.Count ? $"{package.DisplayName}, {PictureName(package.Images[i])}" : null;
+            return (Name(Engine.Package, plan?.Current?.Image), Name(plan?.LockPackage, plan?.LockCurrent?.Image), plan?.Dark, Engine.Position?.Description, Engine.Problem);
+        }
+    }
 
     /// <summary>Resume, the one action while paused (its own button: a button acts or opens a menu, never both).</summary>
     void Resume_Click(object sender, RoutedEventArgs e) => host.Pause(null);

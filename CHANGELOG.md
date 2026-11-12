@@ -4,6 +4,10 @@ All notable changes to DynaTones. Downloads will be on the [releases page](../..
 
 ## Not released yet
 
+- **Check, as in every EsteemWorks app.** The small refresh icon in the header is now the family's Check button
+  with its name. It reads the settings and the location again and puts everything right for this moment, as before;
+  F5 does the same. Afterwards a notification says what changed (the desktop or lock screen picture, light or dark,
+  the location, a new problem), or "Checked everything, nothing new."
 - **The window's groundwork as in every EsteemWorks app.** Body text in Segoe UI Variable Text, a little lighter;
   the pages under the tabs line up with the header. The desktop, lock screen, package and picture pages under
   Background and the gallery open as pages with Back and their title; Back or Esc returns to where they were opened,
