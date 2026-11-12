@@ -327,7 +327,7 @@ public partial class MainWindow : Window
         // The action docks at the bottom, so the cards of a row end on one line whatever their texts.
         var dock = new DockPanel { LastChildFill = true };
         var stack = new StackPanel();
-        var preview = new Border { Height = 174, CornerRadius = new CornerRadius(6), ClipToBounds = true, Background = B("Surface2") };
+        var preview = new Border { Height = 174, CornerRadius = (CornerRadius)FindResource("RadiusControl"), ClipToBounds = true, Background = B("Surface2") };
         if (entry.PreviewFile is { } file)
         {
             // Read off the window's thread, like every picture.
@@ -449,7 +449,7 @@ public partial class MainWindow : Window
         var current = Engine.Position;
         var map = new PlaceMap { Width = 120, Height = 66 };
         if (current != null) map.Show(current.Latitude, current.Longitude);
-        var mapBox = new Border { CornerRadius = new CornerRadius(6), ClipToBounds = true, BorderBrush = B("Line"), BorderThickness = new Thickness(1), Child = map };
+        var mapBox = new Border { CornerRadius = (CornerRadius)FindResource("RadiusControl"), ClipToBounds = true, BorderBrush = B("Line"), BorderThickness = new Thickness(1), Child = map };
         var facts = new List<string>();
         if (Engine.Plan?.Today is { } day)
             facts.Add(Strings.T($"Sunrise {Fmt(day.Crossing(Sun.SunriseElevation, true))}, sunset {Fmt(day.Crossing(Sun.SunriseElevation, false))}",

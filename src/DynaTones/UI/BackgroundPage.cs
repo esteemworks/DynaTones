@@ -39,41 +39,14 @@ public partial class MainWindow
 
     Style S(string key) => (Style)FindResource(key);
 
-    readonly List<(WeakReference<SolidColorBrush> Brush, string Key)> followers = [];
-    bool brushesFollow;
-
     /// <summary>
-    /// A token as a brush for elements built in code. A plain lookup would keep the colors of the moment it was built,
-    /// so a page built light stayed light in parts when the window turned dark (white lines, dark titles on dark,
-    /// 12.11.2026). The brush is the window's own and is recolored on every change of the theme, without building the
-    /// page again (which would take the focus away).
+    /// A token as a brush for elements built in code, recolored on every change of the theme without building the page
+    /// again (kit Theme.Follow, round F; it began here as DynaTones' own, 12.11.2026).
     /// </summary>
-    Brush B(string key)
-    {
-        if (FindResource(key) is not SolidColorBrush source) return (Brush)FindResource(key);
-        if (!brushesFollow)
-        {
-            brushesFollow = true;
-            void Recolor() => Dispatcher.BeginInvoke(RecolorBrushes);
-            Theme.Changed += Recolor;
-            Closed += (_, _) => Theme.Changed -= Recolor;
-        }
-        if (followers.Count > 4000) followers.RemoveAll(f => !f.Brush.TryGetTarget(out _));
-        var brush = new SolidColorBrush(source.Color) { Opacity = source.Opacity };
-        followers.Add((new WeakReference<SolidColorBrush>(brush), key));
-        return brush;
-    }
+    static Brush B(string key) => Theme.Follow(key);
 
-    void RecolorBrushes()
-    {
-        followers.RemoveAll(f => !f.Brush.TryGetTarget(out _));
-        foreach (var (weak, key) in followers)
-            if (weak.TryGetTarget(out var brush) && TryFindResource(key) is SolidColorBrush now)
-            {
-                brush.Color = now.Color;
-                brush.Opacity = now.Opacity;
-            }
-    }
+    /// <summary>A size of the kit's type scale by its name (TextCaption, TextSmall, TextBody, TextTitle, TextIcon).</summary>
+    double TypeSize(string key) => (double)FindResource(key);
 
     // ---------- Navigation ----------
 
@@ -288,7 +261,7 @@ public partial class MainWindow
             {
                 // Side actions of the day, in text (QuietButton): the window's one primary is in the header.
                 var skip = new Button { Style = S("QuietButton"), Content = Ui.Horizontal(
-                    new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", FontSize = 14, VerticalAlignment = VerticalAlignment.Center },
+                    new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", FontSize = TypeSize("TextIcon"), VerticalAlignment = VerticalAlignment.Center },
                     new TextBlock { Text = Strings.T("Next image", "Nächstes Bild"), Margin = new Thickness(8, 0, 0, 0) }) };
                 skip.Click += (_, _) => Engine.SkipNext();
                 Ui.Speak(skip, Strings.T("Next image", "Nächstes Bild"));
@@ -348,7 +321,7 @@ public partial class MainWindow
 
     Border Picture(string? path, double width, double height, int pixels = 320)
     {
-        var box = new Border { Width = width, Height = height, CornerRadius = new CornerRadius(8), ClipToBounds = true, Background = B("Surface2") };
+        var box = new Border { Width = width, Height = height, CornerRadius = (CornerRadius)FindResource("RadiusRow"), ClipToBounds = true, Background = B("Surface2") };
         if (path == null) return box;
         // Read off the window's thread: the box shows the picture as soon as it is there.
         void Show()
@@ -436,13 +409,13 @@ public partial class MainWindow
         grid.Children.Add(picture);
         var text = new StackPanel { Margin = new Thickness(16, 0, 12, 0), VerticalAlignment = VerticalAlignment.Center };
         text.Children.Add(Ui.Horizontal(
-            new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = glyph, FontSize = 14, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 1, 8, 0) },
+            new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = glyph, FontSize = TypeSize("TextIcon"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 1, 8, 0) },
             new TextBlock { Style = S("CardTitle"), Text = title, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center }));
         text.Children.Add(new TextBlock { Style = S("RowLabel"), Text = line, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 6, 0, 0) });
         text.Children.Add(new TextBlock { Style = S("Muted"), Text = when, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) });
         Grid.SetColumn(text, 1);
         grid.Children.Add(text);
-        var chevron = new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "\uE76C", FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Foreground = B("Text4") };
+        var chevron = new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "\uE76C", FontSize = TypeSize("TextSmall"), VerticalAlignment = VerticalAlignment.Center, Foreground = B("Text4") };
         Grid.SetColumn(chevron, 2);
         grid.Children.Add(chevron);
         var button = new Button
@@ -479,7 +452,7 @@ public partial class MainWindow
         var shown = p.Images.Where(i => i.Anchor.Mode != AnchorMode.Off).ToList();
         if (shown.Count == 0) shown = p.Images;
         var paths = shown.Select(p.PathOf).ToList();
-        return new Border { CornerRadius = new CornerRadius(6), ClipToBounds = true, Background = B("Surface2"), Child = new StripView(paths, pixels) { Height = height } };
+        return new Border { CornerRadius = (CornerRadius)FindResource("RadiusControl"), ClipToBounds = true, Background = B("Surface2"), Child = new StripView(paths, pixels) { Height = height } };
     }
 
     /// <summary>Each picture fills the whole strip, and only its own slice of it is drawn: the slices line up.</summary>
@@ -651,7 +624,7 @@ public partial class MainWindow
             new ChoiceCardItem<int>(Transitions.Gentle, Strings.T("Gentle", "Sanft"), Detail: Strings.T("a few seconds", "einige Sekunden")),
             new ChoiceCardItem<int>(Flowing, Strings.T("Flowing", "Fließend"), Detail: Strings.T("over 10, 30 or 60 minutes", "über 10, 30 oder 60 Minuten")),
         };
-        return Ui.ChoiceCards(items, code > 0 ? Flowing : code, v => ChooseKeepingFocus("transition", () => set(v == Flowing ? flowing : v)), columns: 3,
+        return Ui.ChoiceCards(items, code > 0 ? Flowing : code, v => set(v == Flowing ? flowing : v), columns: 3,
             detailFor: v => v == Flowing ? FlowingRow() : null, groupName: "transition");
 
         FrameworkElement FlowingRow()
@@ -660,28 +633,6 @@ public partial class MainWindow
                 flowing is 10 or 30 or 60 ? flowing : 30, m => set(m), 130);
             Ui.Speak(minutes, Strings.T("Flowing over", "Fließend über"));
             return Ui.Horizontal(new TextBlock { Style = S("Muted"), Text = Strings.T("Flowing over", "Fließend über"), VerticalAlignment = VerticalAlignment.Center }, Ui.Spacer(), minutes);
-        }
-    }
-
-    /// <summary>
-    /// A choice among the kit's choice cards: the page is built anew after it, and when the choice was made with the
-    /// keyboard the focus goes back to the chosen card of the same group.
-    /// </summary>
-    void ChooseKeepingFocus(string group, Action choose)
-    {
-        var byKeyboard = System.Windows.Input.Keyboard.FocusedElement is RadioButton { GroupName: var name } && name == group;
-        choose();
-        if (byKeyboard) Dispatcher.BeginInvoke(() => FindChosen(this, group)?.Focus(), System.Windows.Threading.DispatcherPriority.Input);
-
-        static RadioButton? FindChosen(DependencyObject parent, string group)
-        {
-            for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-            {
-                var child = VisualTreeHelper.GetChild(parent, i);
-                if (child is RadioButton { IsChecked: true, IsVisible: true } radio && radio.GroupName == group) return radio;
-                if (FindChosen(child, group) is { } found) return found;
-            }
-            return null;
         }
     }
 
@@ -700,7 +651,7 @@ public partial class MainWindow
             var starts = slots.Where(s => s.Image == i).Select(s => Strings.Time(s.Start)).ToList();
             var stack = new StackPanel();
             var picture = Picture(p.PathOf(image), double.NaN, 54, 240);
-            picture.CornerRadius = new CornerRadius(6);
+            picture.CornerRadius = (CornerRadius)FindResource("RadiusControl");
             if (current == i)
             {
                 picture.BorderBrush = B("Accent");
@@ -789,12 +740,12 @@ public partial class MainWindow
                 Detail: Strings.T("DynaTones leaves it alone.", "DynaTones lässt ihn in Ruhe.")),
         };
         var lockNow = !l.Enabled ? "windows" : l.Source == LockScreenSource.Package ? "package" : "desktop";
-        var choices = Ui.ChoiceCards(lockItems, lockNow, key => ChooseKeepingFocus("lock", () =>
+        var choices = Ui.ChoiceCards(lockItems, lockNow, key =>
         {
             if (key == "desktop") SetLock(LockScreenSource.Wallpaper, null);
             else if (key == "package") SetLock(LockScreenSource.Package, own?.Id);
             else SetLock(null, null);
-        }), columns: 3, detailFor: key => key switch
+        }, columns: 3, detailFor: key => key switch
         {
             "package" when packages.Count > 0 => Ui.Horizontal(new TextBlock { Style = S("Muted"), Text = Strings.T("Package", "Paket"), VerticalAlignment = VerticalAlignment.Center }, Ui.Spacer(),
                 Ui.Speak(Ui.Choice(packages.Select(p => ((string?)p.Id, p.DisplayName)), own?.Id, id => SetLock(LockScreenSource.Package, id), 220), Strings.T("Package for the lock screen", "Paket für den Sperrbildschirm"))),
@@ -844,7 +795,7 @@ public partial class MainWindow
     FrameworkElement LockPicture(string? path)
     {
         var picture = Picture(path, double.NaN, 110, 320);
-        picture.CornerRadius = new CornerRadius(6);
+        picture.CornerRadius = (CornerRadius)FindResource("RadiusControl");
         if (path == null) picture.Child = new TextBlock { Style = S("Muted"), Text = Strings.T("Picture from Windows", "Bild aus Windows"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         return picture;
     }
@@ -968,7 +919,7 @@ public partial class MainWindow
             new ChoiceCardItem<AnchorMode>(AnchorMode.Time, Strings.T("At a clock time", "Zu einer Uhrzeit"), Detail: Strings.T("Every day at the same time.", "Jeden Tag zur selben Zeit.")),
             new ChoiceCardItem<AnchorMode>(AnchorMode.Off, Strings.T("Do not show this picture", "Dieses Bild nicht zeigen")),
         };
-        right.Children.Add(Ui.ChoiceCards(anchors, a.Mode, mode => ChooseKeepingFocus("anchor", () => SetAnchor(p, image, x =>
+        right.Children.Add(Ui.ChoiceCards(anchors, a.Mode, mode => SetAnchor(p, image, x =>
         {
             switch (mode)
             {
@@ -985,7 +936,7 @@ public partial class MainWindow
                     x.Mode = mode;
                     break;
             }
-        })), columns: 1, detailFor: mode => mode switch
+        }), columns: 1, detailFor: mode => mode switch
         {
             AnchorMode.Sun => sunLine,
             AnchorMode.Time => timeLine,
@@ -1166,7 +1117,7 @@ public partial class MainWindow
     {
         var toDark = !(plan.Dark ?? Appearance.AppsLight == false);
         var content = Ui.Horizontal(
-            new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = toDark ? "" : "", FontSize = 13, VerticalAlignment = VerticalAlignment.Center },
+            new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = toDark ? "" : "", FontSize = TypeSize("TextBody"), VerticalAlignment = VerticalAlignment.Center },
             new TextBlock { Text = TrayHost.SwitchText(plan), Margin = new Thickness(8, 0, 0, 0) });
         var button = new Button { Style = S("QuietButton"), Content = content };
         Ui.Speak(button, TrayHost.SwitchText(plan));

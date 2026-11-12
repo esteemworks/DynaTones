@@ -101,7 +101,7 @@ public partial class MainWindow
         var choices = Packages.LoadAll().Where(p => !removing.Contains(p.Id) && p.Images.Count > 0).Select(package =>
             new ChoiceCardItem<string?>(package.Id, package.DisplayName, Picture(package.PathOf(package.Images[Math.Min(package.Images.Count - 1, package.Images.Count / 2)]), double.NaN, 64)));
         // The kit's choice cards (Ui.ChoiceCards): one Tab stop, the arrow keys choose.
-        var tiles = Ui.ChoiceCards(choices, chosen, id => ChooseKeepingFocus("intro-pictures", () => ChangeAndRebuild(c => c.Wallpaper.PackageId = id, Frame.RefreshStep)), columns: 4, groupName: "intro-pictures");
+        var tiles = Ui.ChoiceCards(choices, chosen, id => ChangeAndRebuild(c => c.Wallpaper.PackageId = id, Frame.RefreshStep), columns: 4, groupName: "intro-pictures");
         pictures.Children.Add(tiles);
         var more = new UniformGrid { Columns = 4, Margin = new Thickness(0, 8, 0, 0) };
         more.Children.Add(ActionTile(Glyph(""), Strings.T("From the gallery", "Aus der Galerie"), () =>
@@ -167,7 +167,7 @@ public partial class MainWindow
     FrameworkElement Glyph(string glyph) => new Border
     {
         Height = 64,
-        CornerRadius = new CornerRadius(6),
+        CornerRadius = (CornerRadius)FindResource("RadiusControl"),
         Background = B("Surface2"),
         Child = new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = glyph, FontSize = 20, Foreground = B("Text3"),
             HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },

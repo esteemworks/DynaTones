@@ -33,7 +33,7 @@ public partial class MainWindow
         var left = new StackPanel();
         columns.Children.Add(new Border { Style = S("Card"), Child = left, Padding = new Thickness(20, 20, 20, 20), VerticalAlignment = VerticalAlignment.Top });
         left.Children.Add(p.Images.Count > 0 ? DayStrip(p, 110, 640)
-            : new Border { Height = 110, CornerRadius = new CornerRadius(6), Background = B("Surface2"),
+            : new Border { Height = 110, CornerRadius = (CornerRadius)FindResource("RadiusControl"), Background = B("Surface2"),
                 Child = new TextBlock { Style = S("Muted"), Text = Strings.T("No pictures yet", "Noch keine Bilder"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } });
 
         TextBlock Label(string text) => new() { Style = S("Muted"), Text = text, Margin = new Thickness(0, 14, 0, 4) };
@@ -181,7 +181,7 @@ public partial class MainWindow
         var image = p.Images[index];
         var stack = new StackPanel();
         var picture = Picture(p.PathOf(image), double.NaN, 64, 240);
-        picture.CornerRadius = new CornerRadius(6);
+        picture.CornerRadius = (CornerRadius)FindResource("RadiusControl");
         stack.Children.Add(picture);
         stack.Children.Add(new TextBlock { Style = S("RowLabel"), Text = PictureName(image), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 4, 0, 0) });
         var starts = slots.Where(s => s.Image == index).Select(s => Strings.Time(s.Start)).ToList();

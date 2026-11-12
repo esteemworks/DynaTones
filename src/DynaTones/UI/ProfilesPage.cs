@@ -213,7 +213,7 @@ public partial class MainWindow
         if (own)
         {
             var back = new Button { Style = S("IconButton"), Width = 26, Height = 26, Margin = new Thickness(6, 0, 0, 0),
-                Content = new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", FontSize = 12 } };
+                Content = new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", FontSize = TypeSize("TextSmall") } };
             back.ToolTip = Strings.T("Back to the value taken over from Background and Color mode", "Zurück zum übernommenen Wert aus Hintergrund und Farbmodus");
             Ui.Speak(back, Strings.T($"Reset {label}", $"{label} zurücksetzen"));
             back.Click += (_, _) => reset();

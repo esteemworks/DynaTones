@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using DynaTones.Core;
@@ -177,12 +178,12 @@ public partial class MainWindow
     /// <summary>One rule as a sentence in a field tinted like what it starts: "Light from [30] min. [after] sunrise".</summary>
     UIElement Rule(bool light, AppearanceSettings a)
     {
-        var dark = Theme.IsDark;
-        var tint = light ? (dark ? Color.FromRgb(0x3A, 0x33, 0x24) : Color.FromRgb(0xFB, 0xF7, 0xEC)) : (dark ? Color.FromRgb(0x2A, 0x2C, 0x42) : Color.FromRgb(0xEE, 0xEF, 0xF6));
-        var ink = light ? (dark ? Color.FromRgb(0xE8, 0xC0, 0x5A) : Color.FromRgb(0xB8, 0x86, 0x0B)) : (dark ? Color.FromRgb(0xA9, 0xAE, 0xE8) : Color.FromRgb(0x3F, 0x43, 0x78));
+        // The kit's tokens for day and night (round F), light and dark, recolored with the theme.
+        var tint = B(light ? "DayTint" : "NightTint");
+        var ink = B(light ? "DayInk" : "NightInk");
         var row = new WrapPanel { VerticalAlignment = VerticalAlignment.Center };
         TextBlock Word(string text) => new() { Style = S("RowLabel"), Text = text, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
-        row.Children.Add(new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = light ? "" : "", FontSize = 15, Foreground = new SolidColorBrush(ink), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
+        row.Children.Add(new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = light ? "" : "", FontSize = 15, Foreground = ink, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
         row.Children.Add(Word(light ? Strings.T("Light from", "Hell ab") : Strings.T("Dark from", "Dunkel ab")));
         if (a.Trigger == AppearanceTrigger.Sun)
         {
@@ -235,8 +236,8 @@ public partial class MainWindow
         }
         return new Border
         {
-            Background = new SolidColorBrush(tint),
-            CornerRadius = new CornerRadius(8),
+            Background = tint,
+            CornerRadius = (CornerRadius)FindResource("RadiusRow"),
             Padding = new Thickness(14, 8, 14, 8),
             MinHeight = 48,
             Margin = light ? new Thickness(0, 0, 8, 0) : new Thickness(8, 0, 0, 0),
@@ -286,6 +287,8 @@ public partial class MainWindow
         return grid;
     }
 
+    // The small pictures of Windows (a window, the taskbar, a pointer) paint Windows' own colors, not the app's: they
+    // show what changes there, so they keep their own values (kit round F leaves picture content to the app).
     static Brush Hex(string hex) => (SolidColorBrush)new BrushConverter().ConvertFromString(hex)!;
 
     /// <summary>A desktop with an app window, light or dark.</summary>
@@ -296,7 +299,7 @@ public partial class MainWindow
         lines.Children.Add(new Border { Height = 6, Width = 60, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(8, 8, 0, 0), CornerRadius = new CornerRadius(3), Background = Hex(light ? "#D6D6D6" : "#5A5A5A") });
         lines.Children.Add(new Border { Height = 6, Width = 40, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(8, 6, 0, 0), CornerRadius = new CornerRadius(3), Background = Hex(light ? "#E5E5E5" : "#444444") });
         var window = new Border { CornerRadius = new CornerRadius(4), BorderThickness = new Thickness(1), BorderBrush = Hex(light ? "#D6D6D6" : "#3A3A3A"), Background = Hex(light ? "#FFFFFF" : "#2B2B2B"), Child = lines };
-        return new Border { Height = 78, CornerRadius = new CornerRadius(6), Padding = new Thickness(10), Background = Hex(day ? "#DDE7F2" : "#2A2D4A"), Child = window };
+        return new Border { Height = 78, CornerRadius = (CornerRadius)Application.Current.FindResource("RadiusControl"), Padding = new Thickness(10), Background = Hex(day ? "#DDE7F2" : "#2A2D4A"), Child = window };
     }
 
     /// <summary>A desktop with the taskbar, light or dark.</summary>
@@ -308,7 +311,7 @@ public partial class MainWindow
         foreach (var color in new[] { "#4DABF7", light ? "#6B6B6B" : "#8A8A8A", light ? "#6B6B6B" : "#8A8A8A" })
             icons.Children.Add(new Border { Width = 8, Height = 8, CornerRadius = new CornerRadius(2), Background = Hex(color), Margin = new Thickness(2.5, 0, 2.5, 0) });
         var bar = new Border { Height = 16, VerticalAlignment = VerticalAlignment.Bottom, Background = Hex(light ? "#EDEDED" : "#202020"), Child = icons };
-        return new Border { Height = 78, CornerRadius = new CornerRadius(6), ClipToBounds = true, Background = Hex(day ? "#DDE7F2" : "#2A2D4A"), Child = bar };
+        return new Border { Height = 78, CornerRadius = (CornerRadius)Application.Current.FindResource("RadiusControl"), ClipToBounds = true, Background = Hex(day ? "#DDE7F2" : "#2A2D4A"), Child = bar };
     }
 
     /// <summary>The normal pointer and the text pointer of a scheme, from its own files; Windows' when it has none.</summary>
@@ -327,7 +330,7 @@ public partial class MainWindow
             if (shown is FrameworkElement f) f.Margin = new Thickness(6, 0, 6, 0);
             row.Children.Add(shown);
         }
-        return new Border { Height = 78, CornerRadius = new CornerRadius(6), Background = Hex(day ? "#F3F3F3" : "#2B2B2B"), Child = row };
+        return new Border { Height = 78, CornerRadius = (CornerRadius)FindResource("RadiusControl"), Background = Hex(day ? "#F3F3F3" : "#2B2B2B"), Child = row };
     }
 
     /// <summary>Windows' own arrow or text pointer, drawn: for a role a scheme leaves to Windows.</summary>
@@ -377,6 +380,9 @@ public partial class MainWindow
 /// </summary>
 sealed class ModeBand : FrameworkElement
 {
+    /// <summary>A size of the kit's type scale by its name (TextCaption, TextSmall, TextBody, TextTitle, TextIcon).</summary>
+    double TypeSize(string key) => (double)FindResource(key);
+
     Plan? plan;
     AppearanceSettings? settings;
     Action<int?, int?>? commit;
@@ -428,10 +434,10 @@ sealed class ModeBand : FrameworkElement
         var culture = Strings.Culture;
         var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
         var text = Theme.Brush("Text4");
-        var light = new SolidColorBrush(Color.FromRgb(0xF3, 0xE3, 0xC3));
-        var darkBrush = new SolidColorBrush(Color.FromRgb(0x3F, 0x43, 0x78));
+        var light = Theme.Brush("DayBar");
+        var darkBrush = Theme.Brush("NightBar");
         FormattedText Label(string s, double size, Brush brush, bool bold = false) =>
-            new(s, culture, FlowDirection.LeftToRight, new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, bold ? FontWeights.SemiBold : FontWeights.Normal, FontStretches.Normal), size, brush, dpi);
+            new(s, culture, FlowDirection.LeftToRight, new Typeface(TextElement.GetFontFamily(this), FontStyles.Normal, bold ? FontWeights.SemiBold : FontWeights.Normal, FontStretches.Normal), size, brush, dpi);
 
         // The band, from the plan; while a handle is dragged, with the handle's new place.
         var l = dragging == 1 ? At(dragX) : lightAt;
@@ -449,14 +455,14 @@ sealed class ModeBand : FrameworkElement
             if (at is not { } t) continue;
             var x = X(t);
             dc.DrawLine(line, new Point(x, BandTop - 4), new Point(x, BandTop + BandHeight + 4));
-            var label = Label($"{name} {Strings.Time(t)}", 11, text);
+            var label = Label($"{name} {Strings.Time(t)}", TypeSize("TextCaption"), text);
             dc.DrawText(label, new Point(Math.Clamp(x - label.Width / 2, 0, ActualWidth - label.Width), 0));
         }
 
         // The light span, named in its middle.
         if (l is { } a && d is { } b && b > a)
         {
-            var span = Label(Strings.T($"light, {Strings.Time(a)} to {Strings.Time(b)}", $"hell, {Strings.Time(a)} bis {Strings.Time(b)}"), 12, new SolidColorBrush(Color.FromRgb(0x6B, 0x4E, 0x16)), true);
+            var span = Label(Strings.T($"light, {Strings.Time(a)} to {Strings.Time(b)}", $"hell, {Strings.Time(a)} bis {Strings.Time(b)}"), TypeSize("TextSmall"), Theme.Brush("DayInk"), true);
             if (X(b) - X(a) > span.Width + 24) dc.DrawText(span, new Point((X(a) + X(b) - span.Width) / 2, BandTop + (BandHeight - span.Height) / 2));
         }
 
@@ -475,7 +481,7 @@ sealed class ModeBand : FrameworkElement
         // Hours.
         foreach (var h in new[] { 0, 6, 12, 18, 24 })
         {
-            var label = Label($"{h:00}:00", 11, text);
+            var label = Label($"{h:00}:00", TypeSize("TextCaption"), text);
             var x = h * ActualWidth / 24;
             dc.DrawText(label, new Point(Math.Clamp(x - label.Width / 2, 0, ActualWidth - label.Width), AxisTop));
         }

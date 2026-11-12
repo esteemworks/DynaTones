@@ -2,6 +2,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using DynaTones.Core;
@@ -15,6 +16,9 @@ namespace DynaTones.UI;
 /// </summary>
 public sealed class DayTimeline : FrameworkElement
 {
+    /// <summary>A size of the kit's type scale by its name (TextCaption, TextSmall, TextBody, TextTitle, TextIcon).</summary>
+    double TypeSize(string key) => (double)FindResource(key);
+
     Plan? plan;
     Package? package;
     bool showNow = true;
@@ -93,15 +97,15 @@ public sealed class DayTimeline : FrameworkElement
             var x = h == 24 ? Left + Width0 : X(t);
             dc.DrawLine(linePen, new Point(x, Top), new Point(x, Top + CurveHeight));
             var label = new FormattedText(h.ToString("00", culture) + ":00", culture, FlowDirection.LeftToRight,
-                new Typeface("Segoe UI"), 11, text4, dpi);
+                new Typeface(TextElement.GetFontFamily(this), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal), TypeSize("TextCaption"), text4, dpi);
             dc.DrawText(label, new Point(Math.Min(x - label.Width / 2, ActualWidth - label.Width - 2), ActualHeight - AxisHeight + 4));
         }
 
         // Horizon and the band where the real elevation counts.
         dc.DrawLine(new Pen(text4, 1) { DashStyle = DashStyles.Dash }, new Point(Left, horizonY), new Point(Left + Width0, horizonY));
-        var horizonLabel = new FormattedText("0°", culture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 11, text4, dpi);
+        var horizonLabel = new FormattedText("0°", culture, FlowDirection.LeftToRight, new Typeface(TextElement.GetFontFamily(this), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal), TypeSize("TextCaption"), text4, dpi);
         dc.DrawText(horizonLabel, new Point(Left - horizonLabel.Width - 8, horizonY - horizonLabel.Height / 2));
-        var topLabel = new FormattedText(Strings.Degrees(day.Highest), culture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 11, text4, dpi);
+        var topLabel = new FormattedText(Strings.Degrees(day.Highest), culture, FlowDirection.LeftToRight, new Typeface(TextElement.GetFontFamily(this), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal), TypeSize("TextCaption"), text4, dpi);
         dc.DrawText(topLabel, new Point(Left - topLabel.Width - 8, Y(day.Highest) - topLabel.Height / 2));
 
         // The sun's arc.
@@ -122,8 +126,8 @@ public sealed class DayTimeline : FrameworkElement
         var modeTop = Top + CurveHeight + 10;
         if (plan.TodayModes.Count > 0 || plan.Dark != null)
         {
-            var darkBrush = new SolidColorBrush(Color.FromRgb(0x4B, 0x4F, 0x86));
-            var lightBrush = new SolidColorBrush(Color.FromRgb(0xF2, 0xE6, 0xC4));
+            var darkBrush = Theme.Brush("NightBar");
+            var lightBrush = Theme.Brush("DayBar");
             var events = plan.TodayModes.OrderBy(e => e.At).ToList();
             // State at the start of the day: the opposite of the first change, or the plan's state if none.
             var state = events.Count > 0 ? !events[0].Dark : plan.Dark ?? false;
@@ -146,7 +150,7 @@ public sealed class DayTimeline : FrameworkElement
         else
         {
             var hint = new FormattedText(Strings.T("No image package chosen yet", "Noch kein Bildpaket gewählt"), culture,
-                FlowDirection.LeftToRight, new Typeface("Segoe UI"), 13, text2, dpi);
+                FlowDirection.LeftToRight, new Typeface(TextElement.GetFontFamily(this), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal), TypeSize("TextBody"), text2, dpi);
             dc.DrawRoundedRectangle(surface2, null, new Rect(Left, stripTop, Width0, StripHeight), 6, 6);
             dc.DrawText(hint, new Point(Left + (Width0 - hint.Width) / 2, stripTop + (StripHeight - hint.Height) / 2));
         }
@@ -197,7 +201,7 @@ public sealed class DayTimeline : FrameworkElement
             if (r.Width > 44 && from > day.Start)
             {
                 var label = new FormattedText(Strings.Time(from) + (slot.Mirrored ? " \u21BA" : ""), Strings.Culture, FlowDirection.LeftToRight,
-                    new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal), 11, Brushes.White, dpi);
+                    new Typeface(TextElement.GetFontFamily(this), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal), TypeSize("TextCaption"), Brushes.White, dpi);
                 var pill = new Rect(r.X + 4, r.Y + 4, label.Width + 8, label.Height + 2);
                 // The now line runs on top: a time under it would be cut in two. The time moves to the right of the
                 // line, or stays away when the picture has no room for it there (the tooltip still says it).
@@ -218,7 +222,7 @@ public sealed class DayTimeline : FrameworkElement
     /// <summary>A name in the left column, beside a band or strip.</summary>
     void Mark(DrawingContext dc, string name, double top, double height, Brush brush, double dpi)
     {
-        var label = new FormattedText(name, Strings.Culture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 12, brush, dpi);
+        var label = new FormattedText(name, Strings.Culture, FlowDirection.LeftToRight, new Typeface(TextElement.GetFontFamily(this), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal), TypeSize("TextSmall"), brush, dpi);
         dc.DrawText(label, new Point(0, top + (height - label.Height) / 2));
     }
 

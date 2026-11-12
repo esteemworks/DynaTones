@@ -4,6 +4,11 @@ All notable changes to DynaTones. Downloads will be on the [releases page](../..
 
 ## Not released yet
 
+- **Colors and sizes by the family's names.** The light and dark bands under Color mode and the day graph use the
+  family's colors for day and night, the same everywhere; the "Light from" and "Dark from" fields their tints. In
+  light mode the day's ink is a little darker, so it reads well on its tint. Text sizes and corners come from the
+  family's scale, drawn text takes the window's font. The small pictures of Windows under Color mode keep Windows'
+  own colors
 - **Large choices as in every EsteemWorks app.** The transition, the lock screen, when a picture begins and the
   pictures of the introduction are the family's choice cards: one Tab stop, the arrow keys choose, and the keyboard
   focus stays on the chosen card. Each card says in a second line what it means. What belongs to the chosen card

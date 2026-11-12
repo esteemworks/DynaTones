@@ -19,7 +19,8 @@ function Measure-Window($name) {
     $combo = $w.FindFirst('Descendants', (New-Object System.Windows.Automation.PropertyCondition(
         [System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::ComboBox)))
     $c = $combo.Current.BoundingRectangle
-    $field = $bmp.GetPixel([int]($c.X - $r.X + $c.Width / 2 - 20), [int]($c.Y - $r.Y + $c.Height / 2))
+    # Just inside the field's left edge: from the middle the point fell on the words of a choice such as "Like the profile" (12.11.2026).
+    $field = $bmp.GetPixel([int]($c.X - $r.X + 5), [int]($c.Y - $r.Y + $c.Height / 2))
     $page = $bmp.GetPixel(20, [int]($r.Height - 40))
     $g.Dispose(); $bmp.Dispose()
     $light = { param($p) ($p.R + $p.G + $p.B) / 3 -gt 128 }
