@@ -4,6 +4,14 @@ All notable changes to DynaTones. Downloads will be on the [releases page](../..
 
 ## Not released yet
 
+- **Sharing a profile on and off, without copies piling up.** Switching "Offer to all EsteemWorks apps" off while
+  another app of the family uses the profile asks first, then DynaTones keeps a copy of its own; the other apps keep
+  theirs, and what the profile changes in DynaTones (package, transition, lock screen, color mode, pointer) stays
+  with DynaTones' copy. Switching it on again while a shared profile of the same name exists joins that one: with the
+  same days and times without asking, otherwise DynaTones asks whether to use the existing profile or overwrite it,
+  and shows both versions. Switching back and forth never makes a new profile. The remove button says "Remove from
+  DynaTones" while other apps use the profile and "Delete profile" only when it is gone afterwards
+- Screen readers: the switch "Offer to all EsteemWorks apps" has its name
 - **A new tray menu, as the family's:** a head with DynaTones' tile, its name and what holds now ("Light mode, next
   change at 14:50"), a click on it opens the window; then the day's actions with icons (Update now, Next image,
   Switch to dark, Jump to the next dark phase), Pause with its state at the right ("Running", "until 15:00"), and Quit.

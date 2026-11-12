@@ -100,8 +100,8 @@ public partial class MainWindow
         {
             var empty = Ui.Card(ProfilesPanel, Strings.T("Profiles", "Profile"));
             Ui.Note(empty, Strings.T(
-                "A profile changes some of DynaTones' settings at certain times or when you choose it: its own package, transition, lock screen, color mode or pointer. Everything else stays as set under Background and Color mode. A profile can be shared with StartQueue and the other EsteemWorks apps, so one schedule switches them all.",
-                "Ein Profil ändert zu bestimmten Zeiten oder wenn du es wählst einige Einstellungen von DynaTones: eigenes Paket, Übergang, Sperrbildschirm, Farbmodus oder Mauszeiger. Alles andere bleibt, wie unter Hintergrund und Farbmodus eingestellt. Ein Profil lässt sich mit StartQueue und den anderen EsteemWorks-Apps teilen, dann schaltet ein Zeitplan alle um."));
+                "A profile changes some of DynaTones' settings at certain times or when you choose it: its own package, transition, lock screen, color mode or pointer. Everything else stays as set under Background and Color mode. A profile can be shared with the other EsteemWorks apps, so one schedule switches them all.",
+                "Ein Profil ändert zu bestimmten Zeiten oder wenn du es wählst einige Einstellungen von DynaTones: eigenes Paket, Übergang, Sperrbildschirm, Farbmodus oder Mauszeiger. Alles andere bleibt, wie unter Hintergrund und Farbmodus eingestellt. Ein Profil lässt sich mit den anderen EsteemWorks-Apps teilen, dann schaltet ein Zeitplan alle um."));
             var first = Ui.Button(Strings.T("New profile", "Neues Profil"), (s, _) => ShowProfileAddMenu((FrameworkElement)s));
             first.HorizontalAlignment = HorizontalAlignment.Left;
             first.Margin = new Thickness(0, 12, 0, 8);
@@ -196,7 +196,12 @@ public partial class MainWindow
             Content = Ui.Horizontal(new TextBlock { Text = Strings.T("Offer to all EsteemWorks apps", "Für alle EsteemWorks-Apps bereitstellen") }, new TextBlock { Style = S("InfoGlyph") }) };
         share.ToolTip = Strings.T("Other EsteemWorks apps can choose this profile when they add one and attach their own settings to it. Name and schedule are then the same everywhere.",
             "Andere EsteemWorks-Apps können dieses Profil beim Anlegen auswählen und ihre eigenen Einstellungen daran hängen. Name und Zeitplan gelten dann überall gleich.");
-        share.Click += (_, _) => FamilyProfiles.Change(shown.Id, p => p.Shared = share.IsChecked == true);
+        // The content is two parts (words and the info sign): the switch needs its name for screen readers itself.
+        Speak(share, Strings.T("Offer to all EsteemWorks apps", "Für alle EsteemWorks-Apps bereitstellen"));
+        share.Click += async (_, _) =>
+        {
+            if (!await SetSharedAsync(shown.Id, share.IsChecked == true)) share.IsChecked = !(share.IsChecked == true);
+        };
         card.Children.Add(share);
         if (FamilyProfiles.SharedWith(shown, Profiles.App) is { Count: > 0 } others)
             card.Children.Add(new TextBlock { Style = S("Muted"), Margin = new Thickness(0, 6, 0, 0),
@@ -313,14 +318,19 @@ public partial class MainWindow
         var buttons = new Grid { Margin = new Thickness(0, 20, 0, 0) };
         if (editing != null)
         {
-            var delete = Ui.Button(Strings.T("Delete profile", "Profil löschen"), async (_, _) =>
+            // "Remove from DynaTones" while other apps use it, "Delete profile" only when it is gone afterwards (kit
+            // ProfileSharing); the other apps are named from the profile, never written in here.
+            var othersUse = FamilyProfiles.UsedByOthers(editing, Profiles.App);
+            var delete = Ui.Button(ProfileSharing.RemoveLabel(Profiles.App, othersUse), async (_, _) =>
             {
                 var others = FamilyProfiles.SharedWith(editing, Profiles.App);
-                var ok = await dialog.ConfirmAsync(Strings.T($"Delete \"{editing.Name}\"?", $"„{editing.Name}“ löschen?"),
+                var ok = await dialog.ConfirmAsync(others.Count > 0
+                        ? Strings.T($"Remove \"{editing.Name}\" from DynaTones?", $"„{editing.Name}“ aus DynaTones entfernen?")
+                        : Strings.T($"Delete \"{editing.Name}\"?", $"„{editing.Name}“ löschen?"),
                     others.Count > 0
-                        ? Strings.T($"DynaTones stops using it; {string.Join(", ", others)} keeps it.", $"DynaTones nutzt es nicht mehr; {string.Join(", ", others)} behält es.")
+                        ? Strings.T($"DynaTones stops using it; {ProfileSharing.Apps(others)} keeps it.", $"DynaTones nutzt es nicht mehr; {ProfileSharing.Apps(others)} behält es.")
                         : Strings.T("The profile and what it changes in DynaTones are gone.", "Das Profil und was es in DynaTones ändert, sind weg."),
-                    Strings.T("Delete", "Löschen"), danger: true);
+                    ProfileSharing.RemoveLabel(Profiles.App, others.Count > 0), danger: true);
                 if (!ok) return;
                 if (others.Count > 0) FamilyProfiles.Leave(editing.Id, Profiles.App);
                 else FamilyProfiles.Delete(editing.Id);
@@ -339,9 +349,44 @@ public partial class MainWindow
         Dispatcher.BeginInvoke(profileFields.FocusName);
     }
 
-    void SaveProfile()
+    async void SaveProfile()
     {
         if (profileFields.Read() is not { } profile) return;
+        var app = Profiles.App;
+        var before = newProfile ? null : FamilyProfiles.Find(profile.Id);
+
+        // "For all EsteemWorks apps" off while other apps use it: after asking, DynaTones gets a copy of its own and the
+        // others keep theirs; what the profile changes in DynaTones moves to the copy (kit STANDARD, "Family profiles").
+        if (before is { Shared: true } && !profile.Shared && FamilyProfiles.UsedByOthers(before, app))
+        {
+            if (!await ConfirmDetachAsync(before)) return;
+            profile.Id = DetachProfile(before.Id);
+            FamilyProfiles.Save(profile);
+            shownProfile = profile.Id;
+            CloseProfileEditor();
+            return;
+        }
+
+        // On, while another app offers a profile of the same name: join it instead of making another one.
+        var newlyShared = profile.Shared && (newProfile ? profileFields.TakesOver == null : before is not { Shared: true } || !FamilyProfiles.SameName(before.Name, profile.Name));
+        if (newlyShared && FamilyProfiles.SharedNamed(profile.Name, app, except: profile.Id) is { } offered)
+        {
+            var choice = await ChooseRejoinAsync(profile, offered);
+            if (choice == KitDialog.Cancelled)
+            {
+                profileFields.SetShared(false);
+                profileFields.ShowError(ProfileSharing.NotSharedHint(offered.Name));
+                return;
+            }
+            // A new one is saved first, then gives way to the offered one.
+            if (newProfile) FamilyProfiles.Add(profile, app);
+            else FamilyProfiles.Save(profile);
+            RejoinProfile(profile.Id, offered.Id, overwrite: choice == KitDialog.Second);
+            shownProfile = offered.Id;
+            CloseProfileEditor();
+            return;
+        }
+
         if (newProfile)
         {
             if (profileFields.TakesOver is { } id)
@@ -355,6 +400,82 @@ public partial class MainWindow
         else FamilyProfiles.Save(profile);
         shownProfile = profile.Id;
         CloseProfileEditor();
+    }
+
+    /// <summary>
+    /// The switch "Offer to all EsteemWorks apps" on the Profiles page, by the same rules as in the editor. False when
+    /// nothing changed (cancelled), so the switch goes back.
+    /// </summary>
+    async Task<bool> SetSharedAsync(Guid id, bool on)
+    {
+        var app = Profiles.App;
+        if (FamilyProfiles.Find(id) is not { } current) return false;
+        if (!on && current.Shared && FamilyProfiles.UsedByOthers(current, app))
+        {
+            if (!await ConfirmDetachAsync(current)) return false;
+            shownProfile = DetachProfile(id);
+            _ = Dispatcher.BeginInvoke(BuildProfilesPage);
+            return true;
+        }
+        if (on && FamilyProfiles.SharedNamed(current.Name, app, except: id) is { } offered)
+        {
+            var choice = await ChooseRejoinAsync(current, offered);
+            if (choice == KitDialog.Cancelled)
+            {
+                dialog.Notices.Show(ProfileSharing.NotSharedHint(offered.Name));
+                return false;
+            }
+            RejoinProfile(id, offered.Id, overwrite: choice == KitDialog.Second);
+            shownProfile = offered.Id;
+            _ = Dispatcher.BeginInvoke(BuildProfilesPage);
+            return true;
+        }
+        FamilyProfiles.Change(id, p => p.Shared = on);
+        return true;
+    }
+
+    Task<bool> ConfirmDetachAsync(FamilyProfile profile) =>
+        dialog.ConfirmAsync(ProfileSharing.DetachTitle(profile.Name),
+            ProfileSharing.DetachBody(profile.Name, Profiles.App, FamilyProfiles.SharedWith(profile, Profiles.App)), ProfileSharing.Detach);
+
+    /// <summary>
+    /// Same rules: joins without asking, so switching on and off never makes another profile. A profile other apps use
+    /// too cannot simply give way to another (it needs another name). Otherwise the kit's question with its words.
+    /// </summary>
+    async Task<int> ChooseRejoinAsync(FamilyProfile own, FamilyProfile offered)
+    {
+        if (FamilyProfiles.Find(own.Id) is { } saved && FamilyProfiles.UsedByOthers(saved, Profiles.App)) return KitDialog.Cancelled;
+        if (FamilyProfiles.SameRules(own, offered)) return KitDialog.Main;
+        return await dialog.ChooseAsync(ProfileSharing.ClashTitle(offered.Name, offered.Apps), ProfileSharing.ClashBody(own, offered, Profiles.App),
+            ProfileSharing.Overwrite, ProfileSharing.TakeExisting);
+    }
+
+    /// <summary>DynaTones' own copy of a shared profile; what the profile changes in DynaTones moves with it.</summary>
+    Guid DetachProfile(Guid id)
+    {
+        var own = FamilyProfiles.Detach(id, Profiles.App);
+        MoveProfileSettings(id, own);
+        Log.Info("Stopped sharing a profile, DynaTones keeps a copy of its own");
+        return own;
+    }
+
+    /// <summary>Joins the offered profile of the same name; the own one is gone, its DynaTones settings move along.</summary>
+    void RejoinProfile(Guid own, Guid shared, bool overwrite)
+    {
+        FamilyProfiles.Rejoin(own, shared, Profiles.App, overwrite);
+        MoveProfileSettings(own, shared);
+        Log.Info(overwrite ? "Shared a profile again, its rules now apply to the existing one" : "Shared a profile again with the existing one");
+    }
+
+    /// <summary>Package, transition, lock screen, color mode and pointer of a profile, from one id to another.</summary>
+    void MoveProfileSettings(Guid from, Guid to)
+    {
+        if (from == to) return;
+        Change(c =>
+        {
+            if (!c.Profiles.Remove(from, out var settings)) return;
+            if (!c.Profiles.ContainsKey(to)) c.Profiles[to] = settings;
+        });
     }
 
     /// <summary>For the snapshot: the editor for a new profile, then back.</summary>
