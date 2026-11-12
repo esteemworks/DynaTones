@@ -375,7 +375,7 @@ public partial class MainWindow
             if (choice == KitDialog.Cancelled)
             {
                 profileFields.SetShared(false);
-                profileFields.ShowError(ProfileSharing.NotSharedHint(offered.Name));
+                profileFields.ShowHint(ProfileSharing.NotSharedHint(offered.Name));
                 return;
             }
             // A new one is saved first, then gives way to the offered one.
