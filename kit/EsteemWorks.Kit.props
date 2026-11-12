@@ -1,6 +1,6 @@
 <Project>
   <!-- Written by EsteemWorks.Kit tools\pack.ps1. The kit's version in kit\, used when the kit's sources are not next to this repository. -->
   <PropertyGroup>
-    <EsteemWorksKitVersion>0.1.82</EsteemWorksKitVersion>
+    <EsteemWorksKitVersion>0.1.83</EsteemWorksKitVersion>
   </PropertyGroup>
 </Project>
