@@ -4,6 +4,14 @@ All notable changes to DynaTones. Downloads will be on the [releases page](../..
 
 ## Not released yet
 
+- **The window's groundwork as in every EsteemWorks app.** Body text in Segoe UI Variable Text, a little lighter;
+  the pages under the tabs line up with the header. The desktop, lock screen, package and picture pages under
+  Background and the gallery open as pages with Back and their title; Back or Esc returns to where they were opened,
+  with the focus on what opened them and the place scrolled to. Notes on a page (a background Windows blocks, a
+  profile that applies now) are the family's notice line. An empty Profiles tab and a gallery that is off, empty or
+  out of reach say what to do next, the latter with Try again. F5 and Ctrl+N work as before. In a profile's line
+  the buttons say "Pause profile" and "Resume profile", apart from Pause in the header; the chip of the profile that
+  applies says "applies now" instead of a ring. Space on a chip keeps the focus on it
 - **Profiles work as in every EsteemWorks app.** The profiles are chips in their order of precedence, with
   "No profile" last; a ring marks the one that applies now, a pause sign the paused ones. Drag a chip to change
   the order, or right-click it to edit, use it by hand (until the end of its time or until you switch back), pause

@@ -112,10 +112,11 @@ public partial class MainWindow
         profileBody.Children.Clear();
         if (all.Count == 0)
         {
-            var empty = Ui.Card(profileBody, Strings.T("Profiles", "Profile"));
-            Ui.Note(empty, Strings.T(
-                "A profile changes some of DynaTones' settings at certain times or when you choose it: its own package, transition, lock screen, color mode or pointer. Everything else stays as set under Background and Color mode. A profile can be shared with the other EsteemWorks apps, so one schedule switches them all.",
-                "Ein Profil ändert zu bestimmten Zeiten oder wenn du es wählst einige Einstellungen von DynaTones: eigenes Paket, Übergang, Sperrbildschirm, Farbmodus oder Mauszeiger. Alles andere bleibt, wie unter Hintergrund und Farbmodus eingestellt. Ein Profil lässt sich mit den anderen EsteemWorks-Apps teilen, dann schaltet ein Zeitplan alle um."));
+            // The kit's empty state: what a profile is for, and the one way to make the first.
+            Ui.Empty(profileBody, Strings.T("No profile yet", "Noch kein Profil"),
+                Strings.T("A profile changes some of DynaTones' settings at certain times, such as another package at the weekend or always dark in the evening.",
+                    "Ein Profil ändert zu bestimmten Zeiten einige Einstellungen von DynaTones, etwa ein anderes Paket am Wochenende oder abends immer dunkel."),
+                Strings.T("New profile", "Neues Profil"), (sender, _) => KitProfiles.OpenEditor((FrameworkElement)sender, ProfileHost, null));
             return;
         }
         if (all.FirstOrDefault(p => p.Id == shownProfile) is { } shown) BuildProfileSettings(shown);

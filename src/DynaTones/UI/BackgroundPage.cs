@@ -23,7 +23,17 @@ public partial class MainWindow
     BgPage page = BgPage.Overview;
     string? pagePackageId;
     int pageImage;
-    BgPage imageBack = BgPage.Desktop;
+    /// <summary>The kit's page shown in the tab (KitSubpage), whose content is built here; null on the overview.</summary>
+    StackPanel? subPage;
+    StackPanel? galleryPage;
+    /// <summary>What each open page shows, so Back returns to it as it was left: page, package, image, what it showed.</summary>
+    readonly Dictionary<object, (BgPage Page, string? Package, int Image, string? Key)> openPages = [];
+    object? shownContent;
+    int shownDepth;
+    bool pagesFollow;
+
+    /// <summary>Where the tab's content goes: the open page, else the overview.</summary>
+    Panel Target => subPage ?? (Panel)BackgroundPanel;
     DayTimeline? timeline;
     string? shownKey;
 
@@ -67,19 +77,82 @@ public partial class MainWindow
 
     // ---------- Navigation ----------
 
+    /// <summary>
+    /// Opens a page of the Background tab as the kit's page (KitSubpage, as in the settings and every family app): Back
+    /// and its title on top, Back or Esc return to where it was opened, with the focus on what opened it and the place
+    /// scrolled to. The overview closes every page.
+    /// </summary>
     void OpenPage(BgPage to, string? packageId = null, int image = 0)
     {
-        if (to == BgPage.Image) imageBack = page == BgPage.Image ? imageBack : page;
-        page = to;
+        FollowPages();
+        if (to == BgPage.Overview)
+        {
+            while (KitSubpage.Depth(BackgroundView) > 0) KitSubpage.Back(BackgroundView, focus: false);
+            return;
+        }
         if (packageId != null) pagePackageId = packageId;
         pageImage = image;
+        RememberPage();
+        page = to;
+        KitSubpage.Open(BackgroundFrom(), "", panel =>
+        {
+            panel.MaxWidth = 1000;
+            subPage = (StackPanel)panel;
+            openPages[subPage] = (to, pagePackageId, image, null);
+        });
         BuildBackground();
-        BackgroundView?.ScrollToHome();
+    }
+
+    /// <summary>What opens a page: the focused control in the tab (a click focuses it too), else the tab itself.</summary>
+    FrameworkElement BackgroundFrom() =>
+        System.Windows.Input.Keyboard.FocusedElement is FrameworkElement focused && BackgroundView.IsAncestorOf(focused) ? focused : BackgroundPanel;
+
+    /// <summary>Before another page opens on top: what the one below shows, to take up again on Back.</summary>
+    void RememberPage()
+    {
+        if (BackgroundView.Content is { } content && (content == BackgroundPanel || content == subPage))
+            openPages[content] = (page, pagePackageId, pageImage, shownKey);
+    }
+
+    /// <summary>A page opened or closed in the tab (also the kit's Back and Esc): DynaTones takes up what it shows.</summary>
+    void FollowPages()
+    {
+        if (pagesFollow) return;
+        pagesFollow = true;
+        var content = System.ComponentModel.DependencyPropertyDescriptor.FromProperty(ContentControl.ContentProperty, typeof(ScrollViewer));
+        EventHandler changed = (_, _) => PageShown();
+        content.AddValueChanged(BackgroundView, changed);
+        Closed += (_, _) => content.RemoveValueChanged(BackgroundView, changed);
+    }
+
+    void PageShown()
+    {
+        var depth = KitSubpage.Depth(BackgroundView);
+        // Closed: what it showed is not needed any more.
+        if (depth < shownDepth && shownContent != null) openPages.Remove(shownContent);
+        shownDepth = depth;
+        var now = BackgroundView.Content;
+        shownContent = now;
+        galleryOpen = galleryPage != null && now == galleryPage;
+        if (now is StackPanel panel && panel != BackgroundPanel && openPages.TryGetValue(panel, out var at))
+        {
+            subPage = (StackPanel)panel;
+            (page, pagePackageId, pageImage, shownKey) = at;
+        }
+        else
+        {
+            subPage = null;
+            page = BgPage.Overview;
+            shownKey = openPages.TryGetValue(BackgroundPanel, out var overview) ? overview.Key : null;
+            // The overview, after a page that may have changed what it shows.
+            if (now == BackgroundPanel && PageKey() != shownKey) BuildBackground();
+        }
     }
 
     void OpenPackage(string id)
     {
         TabBackground.IsChecked = true;
+        ShowPage();
         OpenPage(BgPage.Package, id);
     }
 
@@ -87,8 +160,8 @@ public partial class MainWindow
     internal void ShowBackgroundPage(string name)
     {
         TabBackground.IsChecked = true;
-        galleryOpen = false;
         ShowPage();
+        OpenPage(BgPage.Overview);
         var first = Engine.Package ?? Packages.LoadAll().FirstOrDefault();
         switch (name)
         {
@@ -96,10 +169,9 @@ public partial class MainWindow
             case "lock": OpenPage(BgPage.Lock); break;
             case "package" when first != null: OpenPage(BgPage.Package, first.Id); break;
             case "image" when first != null:
-                page = BgPage.Desktop;
+                OpenPage(BgPage.Desktop);
                 OpenPage(BgPage.Image, first.Id, Math.Min(1, first.Images.Count - 1));
                 break;
-            default: OpenPage(BgPage.Overview); break;
         }
     }
 
@@ -112,17 +184,22 @@ public partial class MainWindow
         var watch = System.Diagnostics.Stopwatch.StartNew();
         shownKey = null;
         timeline = null;
-        BackgroundPanel.Children.Clear();
+        // On a page the kit's Back and title stay; below them it is built anew.
+        if (subPage != null) while (subPage.Children.Count > 1) subPage.Children.RemoveAt(1);
+        else Target.Children.Clear();
         switch (page)
         {
             case BgPage.Desktop: BuildDesktopPage(); break;
             case BgPage.Lock: BuildLockPage(); break;
             case BgPage.Package when FindPackage(pagePackageId) is { } p: BuildPackagePage(p); break;
             case BgPage.Image when FindPackage(pagePackageId) is { } p && pageImage < p.Images.Count: BuildImagePage(p, pageImage); break;
-            default:
-                page = BgPage.Overview;
+            case BgPage.Overview:
                 BuildOverview();
                 break;
+            default:
+                // The package of the page is gone (removed meanwhile): back to the overview.
+                Dispatcher.BeginInvoke(() => OpenPage(BgPage.Overview));
+                return;
         }
         shownKey = PageKey();
         // A package added during the introduction shows on its step at once.
@@ -165,8 +242,8 @@ public partial class MainWindow
         var plan = Engine.Plan;
         var c = Engine.Settings;
         foreach (var problem in new[] { Engine.Problem, c.LockScreen.Enabled ? Engine.LockProblem : null }.OfType<string>())
-            BackgroundPanel.Children.Add(Warning(problem));
-        if (ProfileNote() is { } note) BackgroundPanel.Children.Add(note);
+            Target.Children.Add(Warning(problem));
+        if (ProfileNote() is { } note) Target.Children.Add(note);
 
         // What shows now, as two cards that open their settings: the whole card is the button.
         var tiles = new Grid { Margin = new Thickness(0, 0, 0, 12) };
@@ -177,10 +254,10 @@ public partial class MainWindow
         var lockTile = LockTile(plan);
         Grid.SetColumn(lockTile, 2);
         tiles.Children.Add(lockTile);
-        BackgroundPanel.Children.Add(tiles);
+        Target.Children.Add(tiles);
 
         var card = new StackPanel();
-        BackgroundPanel.Children.Add(new Border { Style = S("Card"), Child = card, Padding = new Thickness(24, 16, 24, 16), Margin = new Thickness(0, 0, 0, 16) });
+        Target.Children.Add(new Border { Style = S("Card"), Child = card, Padding = new Thickness(24, 16, 24, 16), Margin = new Thickness(0, 0, 0, 16) });
 
         // The day: the sun, light and dark, and the pictures in the order they show, for today or another date. Its
         // actions on the right: Next image (today only), Back to the plan, and the date.
@@ -252,23 +329,20 @@ public partial class MainWindow
         var count = Packages.LoadAll().Count(p => !removing.Contains(p.Id));
         packagesHead.Children.Add(new TextBlock { Style = S("Muted"), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center,
             Text = count == 1 ? Strings.T("1 package", "1 Paket") : Strings.T($"{count} packages", $"{count} Pakete") });
-        BackgroundPanel.Children.Add(packagesHead);
+        Target.Children.Add(packagesHead);
         var grid = new UniformGrid { Columns = 5 };
         foreach (var p in Packages.LoadAll().Where(p => !removing.Contains(p.Id))) grid.Children.Add(PackageTile(p));
         grid.Children.Add(AddTile());
-        BackgroundPanel.Children.Add(grid);
+        Target.Children.Add(grid);
     }
 
-    UIElement Warning(string text) => new Border
+    /// <summary>A note about the page that needs attention: the kit's line (Ui.Banner, as a warning).</summary>
+    UIElement Warning(string text)
     {
-        CornerRadius = new CornerRadius(8),
-        Padding = new Thickness(16, 12, 16, 12),
-        Margin = new Thickness(0, 0, 0, 12),
-        Background = B("WarnBg"),
-        Child = Ui.Horizontal(
-            new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", Foreground = B("WarnText"), VerticalAlignment = VerticalAlignment.Center },
-            new TextBlock { Text = text, Foreground = B("WarnText"), Margin = new Thickness(12, 0, 0, 0), TextWrapping = TextWrapping.Wrap }),
-    };
+        var banner = Ui.Banner(text, warning: true);
+        banner.Margin = new Thickness(0, 0, 0, 12);
+        return banner;
+    }
 
     static string PictureName(PackageImage image) => image.DisplayName;
 
@@ -490,25 +564,17 @@ public partial class MainWindow
 
     // ---------- Pages below the overview ----------
 
-    StackPanel BackRow(string title)
+    /// <summary>The page's title in the kit's head (KitSubpage: Back, then the title).</summary>
+    void PageTitle(string title)
     {
-        var back = new Button { Style = S("SecondaryButton"), Content = Ui.Horizontal(
-            new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", FontSize = 12, VerticalAlignment = VerticalAlignment.Center },
-            new TextBlock { Text = Strings.T("Back", "Zurück"), Margin = new Thickness(8, 0, 0, 0) }) };
-        back.Click += (_, _) => OpenPage(page == BgPage.Image ? imageBack : BgPage.Overview);
-        back.ToolTip = Strings.T("Back (Esc)", "Zurück (Esc)");
-        Speak(back, Strings.T("Back", "Zurück"));
-        var row = Ui.Horizontal(back, new TextBlock { Style = S("H2"), Text = title, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 0, 0) });
-        row.Margin = new Thickness(0, 0, 0, 14);
-        BackgroundPanel.Children.Add(row);
-        return row;
+        if (subPage?.Children[0] is StackPanel head && head.Children.OfType<TextBlock>().FirstOrDefault() is { } heading) heading.Text = title;
     }
 
     void BuildDesktopPage()
     {
-        BackRow(Strings.T("Desktop background", "Desktop-Hintergrund"));
+        PageTitle(Strings.T("Desktop background", "Desktop-Hintergrund"));
         var c = Engine.Settings;
-        var card = Ui.Card(BackgroundPanel, Strings.T("What the desktop shows", "Was der Desktop zeigt"));
+        var card = Ui.Card(Target, Strings.T("What the desktop shows", "Was der Desktop zeigt"));
         var obstacle = Wallpaper.Blocked() ?? Wallpaper.Competitor();
         Ui.Row(card, Strings.T("Change the background", "Hintergrund wechseln"),
             obstacle ?? Strings.T("Off: DynaTones only switches the color mode.", "Aus: DynaTones schaltet nur noch den Farbmodus."),
@@ -558,9 +624,9 @@ public partial class MainWindow
         if (Engine.Package is { } pkg)
         {
             MirrorRow(card, pkg);
-            BackgroundPanel.Children.Add(new TextBlock { Style = S("SectionLabel"), Text = Strings.T("WHEN EACH PICTURE COMES", "WANN JEDES BILD KOMMT"), Margin = new Thickness(0, 6, 0, 8) });
-            BackgroundPanel.Children.Add(ImageGrid(pkg));
-            BackgroundPanel.Children.Add(new TextBlock { Style = S("Muted"), Text = Strings.T("A click on a picture sets when it begins.", "Ein Klick auf ein Bild stellt ein, wann es beginnt."), Margin = new Thickness(0, 4, 0, 0) });
+            Target.Children.Add(new TextBlock { Style = S("SectionLabel"), Text = Strings.T("WHEN EACH PICTURE COMES", "WANN JEDES BILD KOMMT"), Margin = new Thickness(0, 6, 0, 8) });
+            Target.Children.Add(ImageGrid(pkg));
+            Target.Children.Add(new TextBlock { Style = S("Muted"), Text = Strings.T("A click on a picture sets when it begins.", "Ein Klick auf ein Bild stellt ein, wann es beginnt."), Margin = new Thickness(0, 4, 0, 0) });
         }
     }
 
@@ -647,7 +713,8 @@ public partial class MainWindow
                 VerticalContentAlignment = VerticalAlignment.Top,
                 Margin = new Thickness(0, 0, 4, 6),
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                FontFamily = new FontFamily("Segoe UI"),
+                // The button's style sets the icon font; the words take the window's (the kit's).
+                FontFamily = FontFamily,
                 Content = stack,
             };
             button.Click += (_, _) => OpenPage(BgPage.Image, p.Id, index);
@@ -687,13 +754,13 @@ public partial class MainWindow
 
     void BuildLockPage()
     {
-        BackRow(Strings.T("Lock and sign-in screen", "Sperr- und Anmeldebildschirm"));
+        PageTitle(Strings.T("Lock and sign-in screen", "Sperr- und Anmeldebildschirm"));
         var l = Engine.Settings.LockScreen;
-        if (LockScreen.Blocked() is { } blocked) BackgroundPanel.Children.Add(Warning(blocked));
-        else if (l.Enabled && Engine.LockProblem is { } problem) BackgroundPanel.Children.Add(Warning(problem));
+        if (LockScreen.Blocked() is { } blocked) Target.Children.Add(Warning(blocked));
+        else if (l.Enabled && Engine.LockProblem is { } problem) Target.Children.Add(Warning(problem));
 
         var fixedByPolicy = KitPolicy.IsFixed(Policies.LockScreenEnabled);
-        var card = Ui.Card(BackgroundPanel, Strings.T("What the lock screen shows", "Was der Sperrbildschirm zeigt"));
+        var card = Ui.Card(Target, Strings.T("What the lock screen shows", "Was der Sperrbildschirm zeigt"));
         var choices = new UniformGrid { Columns = 3, Margin = new Thickness(0, 4, 0, 8) };
         var desktopPath = Engine.Package is { } dp && Engine.Plan?.Current is { } dc ? dp.PathOf(dp.Images[dc.Image]) : null;
         choices.Children.Add(LockChoice(desktopPath, Strings.T("Like the desktop", "Wie der Desktop"),
@@ -820,12 +887,12 @@ public partial class MainWindow
     void BuildImagePage(Package p, int index)
     {
         var image = p.Images[index];
-        BackRow(PictureName(image));
+        PageTitle(PictureName(image));
         var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) });
         grid.ColumnDefinitions.Add(new ColumnDefinition());
-        BackgroundPanel.Children.Add(new Border { Style = S("Card"), Child = grid, Padding = new Thickness(24, 20, 24, 20) });
+        Target.Children.Add(new Border { Style = S("Card"), Child = grid, Padding = new Thickness(24, 20, 24, 20) });
 
         var left = new StackPanel { Width = 420 };
         left.Children.Add(Picture(p.PathOf(image), 420, 236, 840));

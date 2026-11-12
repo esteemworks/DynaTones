@@ -20,23 +20,14 @@ public partial class MainWindow
     void BuildPackagePage(Package p)
     {
         var c = Engine.Settings;
-        var head = new Grid { Margin = new Thickness(0, 0, 0, 14) };
-        head.ColumnDefinitions.Add(new ColumnDefinition());
-        head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var back = BackRow(p.DisplayName);
-        BackgroundPanel.Children.Remove(back);
-        back.Margin = new Thickness(0);
-        head.Children.Add(back);
-        var saved = new TextBlock { Style = S("Muted"), Text = Strings.T("Changes are saved at once", "Änderungen werden sofort gespeichert"), VerticalAlignment = VerticalAlignment.Center };
-        Grid.SetColumn(saved, 1);
-        head.Children.Add(saved);
-        BackgroundPanel.Children.Add(head);
+        PageTitle(p.DisplayName);
+        Target.Children.Add(new TextBlock { Style = S("Muted"), Text = Strings.T("Changes are saved at once", "Änderungen werden sofort gespeichert"), Margin = new Thickness(0, -8, 0, 14) });
 
         var columns = new Grid();
         columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(400) });
         columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(16) });
         columns.ColumnDefinitions.Add(new ColumnDefinition());
-        BackgroundPanel.Children.Add(columns);
+        Target.Children.Add(columns);
 
         // ---------- Left: the package ----------
         var left = new StackPanel();
@@ -217,7 +208,8 @@ public partial class MainWindow
             Margin = new Thickness(0, 0, 0, 6),
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             VerticalContentAlignment = VerticalAlignment.Top,
-            FontFamily = new FontFamily("Segoe UI"),
+            // The button's style sets the icon font; the words take the window's (the kit's).
+            FontFamily = FontFamily,
             Content = stack,
             AllowDrop = true,
         };

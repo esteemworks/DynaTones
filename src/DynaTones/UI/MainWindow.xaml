@@ -6,9 +6,9 @@
         Title="DynaTones" Width="1120" Height="800" MinWidth="900" MinHeight="600"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource Bg}" Foreground="{DynamicResource Text2}"
-        FontFamily="Segoe UI" FontSize="14"
+        FontSize="14"
         UseLayoutRounding="True" SnapsToDevicePixels="True"
-        AllowDrop="True" DragOver="Window_DragOver" Drop="Window_Drop" PreviewKeyDown="Window_PreviewKeyDown">
+        AllowDrop="True" DragOver="Window_DragOver" Drop="Window_Drop">
 
     <Grid x:Name="Root">
         <!-- The family's window (kit KitFrame): title bar, title with the line of facts, the actions, the tabs with the
@@ -48,36 +48,17 @@
         <!-- ========== Background: what shows now, the way into desktop and lock screen, the packages ==========
              Built in code (BackgroundPage.cs): the overview and its pages (desktop, lock screen, a package, an image). -->
         <ScrollViewer x:Name="BackgroundView" VerticalScrollBarVisibility="Auto">
-            <StackPanel x:Name="BackgroundPanel" Margin="32,20,32,24" MaxWidth="1000" />
-        </ScrollViewer>
-
-        <!-- ========== Gallery, inside Background ==========
-             Back and title scroll with the page, as on the pages under Background, so they line up with the cards
-             whether or not the scroll bar shows. -->
-        <ScrollViewer x:Name="GalleryView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="32,20,32,32" MaxWidth="1000">
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                    <Button x:Name="GalleryBackButton" Style="{StaticResource SecondaryButton}" Click="GalleryBack_Click">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE72B;" FontSize="12" VerticalAlignment="Center" />
-                            <TextBlock x:Name="GalleryBackText" Margin="8,0,0,0" />
-                        </StackPanel>
-                    </Button>
-                    <TextBlock x:Name="GalleryTitle" Style="{StaticResource H2}" VerticalAlignment="Center" Margin="16,0,0,0" />
-                </StackPanel>
-                <TextBlock x:Name="GalleryHelp" Style="{StaticResource Help}" TextWrapping="Wrap" Margin="0,0,0,12" />
-                <UniformGrid x:Name="GalleryCards" Columns="3" Margin="-6,0,-6,0" />
-            </StackPanel>
+            <StackPanel x:Name="BackgroundPanel" Style="{StaticResource TabPage}" MaxWidth="1000" />
         </ScrollViewer>
 
         <!-- ========== Color mode ========== -->
         <ScrollViewer x:Name="ModeView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
-            <StackPanel x:Name="ModePanel" Margin="32,20,32,32" MaxWidth="1000" />
+            <StackPanel x:Name="ModePanel" Style="{StaticResource TabPage}" MaxWidth="1000" />
         </ScrollViewer>
 
         <!-- ========== Profiles ========== -->
         <ScrollViewer x:Name="ProfilesView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
-            <StackPanel x:Name="ProfilesPanel" Margin="32,20,32,32" MaxWidth="1000" />
+            <StackPanel x:Name="ProfilesPanel" Style="{StaticResource TabPage}" MaxWidth="1000" />
         </ScrollViewer>
 
         <!-- ========== Settings ========== -->

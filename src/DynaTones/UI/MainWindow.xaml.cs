@@ -29,6 +29,11 @@ public partial class MainWindow : Window
         TabMode = Frame.AddTab("mode", "");
         TabProfiles = Frame.AddTab("profiles", "");
         Frame.PageChanged += PageChanged;
+        // The keys are the frame's, as in every family app (kit round C): F5 updates, Ctrl+N opens Add package, Esc
+        // closes the settings; pages (KitSubpage) and open lists take Esc first. While a question is open, the keys are its.
+        Frame.Refresh = () => Refresh_Click(this, new RoutedEventArgs());
+        Frame.New = () => KitMenuButton.Toggle(AddButton, fromKeyboard: true, last: false);
+        Frame.KeysBlocked = () => dialog.IsOpen;
         _ = new MiddleScroll(this, ScrollMarker);
         dialog = new KitDialog(DialogLayer);
         // A package waiting for Undo is really deleted when the window goes.
@@ -117,8 +122,6 @@ public partial class MainWindow : Window
         TabMode.ToolTip = Strings.T("Light and dark for apps, Windows and the mouse pointer", "Hell und dunkel für Apps, Windows und den Mauszeiger");
         TabProfiles.ToolTip = Strings.T("Other settings at other times, shared with the EsteemWorks apps", "Andere Einstellungen zu anderen Zeiten, geteilt mit den EsteemWorks-Apps");
 
-        GalleryBackText.Text = Strings.T("Back", "Zurück");
-        GalleryTitle.Text = Strings.T("Gallery", "Galerie");
         GalleryHelp.Text = Strings.T(
             "Each package shows one place from night through the day to night, or one color after the other. Add it, and it is set up " +
             "for the day already. Packages marked as made with AI show invented places.",
@@ -171,11 +174,7 @@ public partial class MainWindow : Window
     {
         if (BackgroundView == null) return;
         // A tab always opens on its own first page; the gallery and the pages under Background start from there.
-        if (Frame.Page != null && (galleryOpen || page != BgPage.Overview))
-        {
-            galleryOpen = false;
-            OpenPage(BgPage.Overview);
-        }
+        if (Frame.Page != null && (galleryOpen || page != BgPage.Overview)) OpenPage(BgPage.Overview);
         ShowPage();
     }
 
@@ -183,8 +182,7 @@ public partial class MainWindow : Window
     {
         var settings = GearButton.IsChecked == true;
         Visibility Shown(bool on) => on ? Visibility.Visible : Visibility.Collapsed;
-        BackgroundView.Visibility = Shown(!settings && TabBackground.IsChecked == true && !galleryOpen);
-        GalleryView.Visibility = Shown(!settings && TabBackground.IsChecked == true && galleryOpen);
+        BackgroundView.Visibility = Shown(!settings && TabBackground.IsChecked == true);
         ModeView.Visibility = Shown(!settings && TabMode.IsChecked == true);
         var profiles = !settings && TabProfiles.IsChecked == true;
         if (profiles && ProfilesView.Visibility != Visibility.Visible) BuildProfilesPage();
@@ -194,67 +192,48 @@ public partial class MainWindow : Window
         ShowProfileColor();
     }
 
-    void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-    {
-        if (dialog.IsOpen) return;
-        // Esc in an open list or menu closes that list or menu only. The window sees keys first (Preview), and closed
-        // the whole settings or went back a page instead (found in the Sandbox, 12.11.2026).
-        if (e.Key == System.Windows.Input.Key.Escape && System.Windows.Input.Keyboard.FocusedElement is ComboBoxItem or MenuItem or ComboBox { IsDropDownOpen: true })
-            return;
-        if (e.Key == System.Windows.Input.Key.F5)
-        {
-            Refresh_Click(sender, e);
-            e.Handled = true;
-        }
-        else if (e.Key == System.Windows.Input.Key.N && System.Windows.Input.Keyboard.Modifiers == System.Windows.Input.ModifierKeys.Control)
-        {
-            KitMenuButton.Toggle(AddButton, fromKeyboard: true, last: false);
-            e.Handled = true;
-        }
-        // Esc on a subpage of the settings goes back (the kit's KitSubpage); only on the first page it closes them.
-        else if (e.Key == System.Windows.Input.Key.Escape && GearButton.IsChecked == true && KitSubpage.Depth(SettingsView) == 0)
-        {
-            GearButton.IsChecked = false;
-            e.Handled = true;
-        }
-        // Esc on a page below Background or in the gallery: one step back.
-        else if (e.Key == System.Windows.Input.Key.Escape && TabBackground.IsChecked == true && (galleryOpen || page != BgPage.Overview))
-        {
-            if (galleryOpen) GalleryBack_Click(sender, e);
-            else OpenPage(page == BgPage.Image ? imageBack : BgPage.Overview);
-            e.Handled = true;
-        }
-    }
-
     // ---------- Gallery ----------
 
     GalleryCatalog? catalog;
+    /// <summary>What the gallery's page holds below the kit's Back and title: a line on the packages, then the cards.</summary>
+    readonly TextBlock GalleryHelp = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12) };
+    readonly System.Windows.Controls.Primitives.UniformGrid GalleryCards = new() { Columns = 3, Margin = new Thickness(-6, 0, -6, 0) };
     /// <summary>Packages being downloaded right now, by gallery id.</summary>
     readonly HashSet<string> adding = [];
     bool galleryLoading;
 
+    /// <summary>
+    /// The gallery, a page of the Background tab (the kit's KitSubpage): Back or Esc returns to where it was opened,
+    /// with the focus on what opened it.
+    /// </summary>
     void OpenGallery()
     {
         TabBackground.IsChecked = true;
         if (GearButton.IsChecked == true) GearButton.IsChecked = false;
-        galleryOpen = true;
         ShowPage();
+        FollowPages();
+        if (!galleryOpen)
+        {
+            GalleryHelp.Style = S("Help");
+            RememberPage();
+            KitSubpage.Open(BackgroundFrom(), Strings.T("Gallery", "Galerie"), page =>
+            {
+                page.MaxWidth = 1000;
+                foreach (var part in new FrameworkElement[] { GalleryHelp, GalleryCards })
+                {
+                    (part.Parent as Panel)?.Children.Remove(part);
+                    page.Children.Add(part);
+                }
+                galleryPage = (StackPanel)page;
+            });
+        }
         _ = LoadGalleryAsync();
-    }
-
-    void GalleryBack_Click(object sender, RoutedEventArgs e)
-    {
-        galleryOpen = false;
-        OpenPage(BgPage.Overview);
-        ShowPage();
     }
 
     /// <summary>For the snapshot: the gallery open, with its list loaded.</summary>
     internal Task ShowGalleryForSnapshot()
     {
-        TabBackground.IsChecked = true;
-        galleryOpen = true;
-        ShowPage();
+        OpenGallery();
         return LoadGalleryAsync();
     }
 
@@ -262,7 +241,9 @@ public partial class MainWindow : Window
     {
         if (Gallery.Source == null)
         {
-            GalleryNote(Strings.T("Your organization switched the gallery off.", "Deine Organisation hat die Galerie ausgeschaltet."));
+            GalleryEmpty(Strings.T("The gallery is off", "Die Galerie ist aus"),
+                Strings.T("Your organization switched it off. Packages can still be added from a folder or a file.",
+                    "Deine Organisation hat sie ausgeschaltet. Pakete lassen sich weiter aus einem Ordner oder einer Datei hinzufügen."));
             return;
         }
         if (catalog == null)
@@ -277,8 +258,10 @@ public partial class MainWindow : Window
             catch (Exception ex)
             {
                 Log.Warning($"Gallery {Gallery.Source} could not be loaded: {ex.Message}");
-                GalleryNote(Strings.T("The gallery could not be reached. Packages you have are not affected; try again later.",
-                    "Die Galerie war nicht erreichbar. Deine Pakete sind davon nicht betroffen; versuch es später noch einmal."));
+                GalleryEmpty(Strings.T("The gallery could not be reached", "Die Galerie war nicht erreichbar"),
+                    Strings.T("Packages you have are not affected. Check the connection and try again.",
+                        "Deine Pakete sind davon nicht betroffen. Prüf die Verbindung und versuch es noch einmal."),
+                    Strings.T("Try again", "Noch einmal versuchen"), () => _ = LoadGalleryAsync());
                 return;
             }
             finally
@@ -287,6 +270,14 @@ public partial class MainWindow : Window
             }
         }
         BuildGalleryCards();
+    }
+
+    /// <summary>The kit's empty state in the gallery's place: a title, one line, at most one action.</summary>
+    void GalleryEmpty(string title, string text, string? action = null, Action? click = null)
+    {
+        GalleryCards.Children.Clear();
+        GalleryCards.Columns = 1;
+        Ui.Empty(GalleryCards, title, text, action, click == null ? null : (_, _) => click());
     }
 
     void GalleryNote(string text)
@@ -303,7 +294,9 @@ public partial class MainWindow : Window
         GalleryCards.Columns = 3;
         if (catalog.Packages.Count == 0)
         {
-            GalleryNote(Strings.T("The gallery has no packages right now.", "Die Galerie hat gerade keine Pakete."));
+            GalleryEmpty(Strings.T("No packages right now", "Gerade keine Pakete"),
+                Strings.T("The gallery is empty at the moment. Packages can be added from a folder or a file.",
+                    "Die Galerie ist gerade leer. Pakete lassen sich aus einem Ordner oder einer Datei hinzufügen."));
             return;
         }
         var installed = Packages.LoadAll().Where(p => p.GalleryId != null && !removing.Contains(p.Id))
@@ -344,12 +337,8 @@ public partial class MainWindow : Window
             action = new TextBlock { Style = (Style)FindResource("Muted"), Text = Strings.T("Downloading and setting up…", "Wird geladen und eingerichtet…") };
         else if (installed != null)
         {
-            var show = Ui.Button(Strings.T("Show", "Anzeigen"), (_, _) =>
-            {
-                galleryOpen = false;
-                OpenPackage(installed.Id);
-                ShowPage();
-            }).Tip(Strings.T("Opens the package under Background.", "Öffnet das Paket unter Hintergrund."));
+            // The package's page opens on top of the gallery; Back returns to the gallery.
+            var show = Ui.Button(Strings.T("Show", "Anzeigen"), (_, _) => OpenPackage(installed.Id)).Tip(Strings.T("Opens the package under Background.", "Öffnet das Paket unter Hintergrund."));
             action = Ui.Horizontal(new TextBlock { Style = (Style)FindResource("Muted"), Text = Strings.T("Added", "Hinzugefügt"), VerticalAlignment = VerticalAlignment.Center },
                 Ui.Spacer(12), show);
         }
