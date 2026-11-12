@@ -136,10 +136,7 @@ public partial class MainWindow
     void RefreshBackground()
     {
         var paused = Engine.Settings.PausedUntil is { } until && until > DateTime.Now;
-        PauseText.Text = paused ? Strings.T("Resume", "Fortsetzen") : Strings.T("Pause", "Pausieren");
-        PauseIcon.Text = paused ? "" : "";
-        PauseChevron.Visibility = paused ? Visibility.Collapsed : Visibility.Visible;
-        Speak(PauseButton, PauseText.Text);
+        UpdatePauseButtons(paused);
         SummaryText.Text = KitIntro.Pending ? NotSwitchedOn : Summary(paused);
 
         if (page is BgPage.Overview or BgPage.Desktop or BgPage.Lock && PageKey() != shownKey) BuildBackground();
@@ -485,7 +482,7 @@ public partial class MainWindow
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             Content = stack,
         };
-        button.Click += (_, _) => ShowAddMenu(button);
+        KitMenuButton.Attach(button, FillAddMenu);
         Speak(button, Strings.T("Add package", "Paket hinzufügen"));
         if (!Policies.UsersMayImport) PolicyLock.Apply(button, Policies.AllowUserImport);
         return button;
@@ -994,18 +991,26 @@ public partial class MainWindow
 
     // ---------- Adding and removing ----------
 
-    void ShowAddMenu(FrameworkElement owner)
+    /// <summary>The ways to add a package: the menu of Add package, its tile and the introduction's own photos.</summary>
+    void FillAddMenu(ContextMenu menu)
     {
+        menu.Items.Clear();
         if (!Policies.UsersMayImport) return;
         var items = new List<(string, string, Action)>();
         if (Gallery.Source != null) items.Add(("", Strings.T("Choose from the gallery", "Aus der Galerie wählen"), OpenGallery));
         items.Add(("", Strings.T("Add a folder of pictures", "Ordner mit Bildern hinzufügen"), ImportFolder));
         items.Add(("", Strings.T("Open a package file (.zip, .ddw)", "Paketdatei öffnen (.zip, .ddw)"), ImportFile));
         items.Add(("", Strings.T("Make a package of your own", "Eigenes Paket anlegen"), NewPackage));
-        ShowMenu(owner, items.ToArray());
+        FillMenu(menu, items.ToArray());
     }
 
-    void AddPackage_Click(object sender, RoutedEventArgs e) => ShowAddMenu(AddButton);
+    /// <summary>Pause while running, Resume while paused, neither before DynaTones is switched on.</summary>
+    void UpdatePauseButtons(bool paused)
+    {
+        var off = KitIntro.Pending;
+        PauseButton.Visibility = !off && !paused ? Visibility.Visible : Visibility.Collapsed;
+        ResumeButton.Visibility = !off && paused ? Visibility.Visible : Visibility.Collapsed;
+    }
 
     void ImportFolder()
     {
@@ -1117,7 +1122,6 @@ public partial class MainWindow
             return button.Tip(Strings.T("Switches Windows' color mode for apps and Windows, as Settings would.",
                 "Schaltet den Farbmodus von Windows für Apps und Windows um, wie die Einstellungen."));
         }
-        content.Children.Add(new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", FontSize = 10, Margin = new Thickness(8, 1, 0, 0), VerticalAlignment = VerticalAlignment.Center });
         var phase = toDark ? Strings.T("dark", "dunklen") : Strings.T("light", "hellen");
         var entries = new List<(string, string, Action)>
         {
@@ -1126,7 +1130,7 @@ public partial class MainWindow
         if (plan.NextModeChange is { } at)
             entries.Add(("", Strings.T($"Jump to the next {phase} phase with its picture, as at {Strings.Time(at)}", $"Zur nächsten {phase} Phase mit ihrem Bild springen, wie um {Strings.Time(at)}"),
                 () => Engine.JumpToMode()));
-        button.Click += (_, _) => ShowMenu(button, [.. entries]);
+        KitMenuButton.Attach(button, menu => FillMenu(menu, [.. entries]));
         var until = plan.NextModeChange is { } next ? Strings.Time(next) : Strings.T("the next change", "zum nächsten Wechsel");
         return button.Tip(Strings.T($"{(toDark ? "Dark" : "Light")} now, until the plan comes there by itself at {until}; then the day goes on as planned.",
             $"{(toDark ? "Dunkel" : "Hell")} ab sofort, bis der Plan um {until} von selbst dahin kommt; danach geht der Tag wie geplant weiter.") + pausedNote);

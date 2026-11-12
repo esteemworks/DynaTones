@@ -84,7 +84,7 @@ public partial class MainWindow
         var add = new Button { Style = S("GhostButton"), Margin = new Thickness(4, 0, 6, 6), Content = Ui.Horizontal(
             new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", FontSize = 14, VerticalAlignment = VerticalAlignment.Center },
             new TextBlock { Text = Strings.T("Add profile", "Profil hinzufügen"), Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center }) };
-        add.Click += (s, _) => ShowProfileAddMenu((FrameworkElement)s);
+        KitMenuButton.Attach(add, FillProfileAddMenu);
         Speak(add, Strings.T("Add profile", "Profil hinzufügen"));
         chips.Children.Add(add);
         bar.Children.Add(chips);
@@ -102,7 +102,8 @@ public partial class MainWindow
             Ui.Note(empty, Strings.T(
                 "A profile changes some of DynaTones' settings at certain times or when you choose it: its own package, transition, lock screen, color mode or pointer. Everything else stays as set under Background and Color mode. A profile can be shared with the other EsteemWorks apps, so one schedule switches them all.",
                 "Ein Profil ändert zu bestimmten Zeiten oder wenn du es wählst einige Einstellungen von DynaTones: eigenes Paket, Übergang, Sperrbildschirm, Farbmodus oder Mauszeiger. Alles andere bleibt, wie unter Hintergrund und Farbmodus eingestellt. Ein Profil lässt sich mit den anderen EsteemWorks-Apps teilen, dann schaltet ein Zeitplan alle um."));
-            var first = Ui.Button(Strings.T("New profile", "Neues Profil"), (s, _) => ShowProfileAddMenu((FrameworkElement)s));
+            var first = Ui.Button(Strings.T("New profile", "Neues Profil"), (_, _) => { });
+            KitMenuButton.Attach(first, FillProfileAddMenu);
             first.HorizontalAlignment = HorizontalAlignment.Left;
             first.Margin = new Thickness(0, 12, 0, 8);
             empty.Children.Add(first);
@@ -261,7 +262,7 @@ public partial class MainWindow
         return stack;
     }
 
-    void ShowProfileAddMenu(FrameworkElement owner)
+    void FillProfileAddMenu(ContextMenu menu)
     {
         var items = new List<(string, string, Action)> { ("", Strings.T("Create a new profile", "Neues Profil anlegen"), () => EditProfile(null)) };
         foreach (var offered in FamilyProfiles.Offered(Profiles.App))
@@ -269,7 +270,7 @@ public partial class MainWindow
             var from = string.Join(", ", offered.Apps);
             items.Add(("", Strings.T($"Take over \"{offered.Name}\" from {from}", $"„{offered.Name}“ aus {from} übernehmen"), () => TakeOverProfile(offered.Id)));
         }
-        ShowMenu(owner, items.ToArray());
+        FillMenu(menu, items.ToArray());
     }
 
     void TakeOverProfile(Guid id)

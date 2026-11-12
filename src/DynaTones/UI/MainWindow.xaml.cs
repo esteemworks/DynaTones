@@ -34,6 +34,9 @@ public partial class MainWindow : Window
         // A package waiting for Undo is really deleted when the window goes.
         Closed += (_, _) => dialog.Flush();
         ApplyTexts();
+        // The header's menu buttons: the kit opens, places and closes their menus and draws the chevron.
+        KitMenuButton.Attach(PauseButton, FillPauseMenu);
+        KitMenuButton.Attach(AddButton, FillAddMenu);
         BuildModePage();
         BuildSettingsPage();
         BuildBackground();
@@ -86,6 +89,10 @@ public partial class MainWindow : Window
     void ApplyTexts()
     {
         AddButtonText.Text = Strings.T("Add package", "Paket hinzufügen");
+        PauseText.Text = Strings.T("Pause", "Pausieren");
+        ResumeText.Text = Strings.T("Resume", "Fortsetzen");
+        Speak(PauseButton, PauseText.Text);
+        Speak(ResumeButton, ResumeText.Text);
         TabBackground.Content = Strings.T("Background", "Hintergrund");
         TabMode.Content = Strings.T("Color mode", "Farbmodus");
         TabProfiles.Content = Strings.T("Profiles", "Profile");
@@ -129,34 +136,32 @@ public partial class MainWindow : Window
         return Task.CompletedTask;
     });
 
-    /// <summary>Paused: one click resumes. Otherwise how long, from a menu.</summary>
-    void Pause_Click(object sender, RoutedEventArgs e)
+    /// <summary>Resume, the one action while paused (its own button: a button acts or opens a menu, never both).</summary>
+    void Resume_Click(object sender, RoutedEventArgs e) => host.Pause(null);
+
+    /// <summary>How long to pause: the Pause button's menu (kit KitMenuButton).</summary>
+    void FillPauseMenu(ContextMenu menu)
     {
-        if (Engine.Settings.PausedUntil is { } until && until > DateTime.Now)
-        {
-            host.Pause(null);
-            return;
-        }
-        ShowMenu(PauseButton,
+        FillMenu(menu,
             ("", Strings.T("For an hour", "Für eine Stunde"), () => host.Pause(DateTime.Now.AddHours(1))),
             ("", Strings.T("Until tomorrow morning", "Bis morgen früh"), () => host.Pause(TrayHost.TomorrowMorning)),
             ("", Strings.T("Until I resume", "Bis ich fortsetze"), () => host.Pause(TrayHost.Forever)));
     }
 
     /// <summary>
-    /// A small menu under a button: each entry with its icon (Segoe Fluent Icons, in the kit's menu column) and its
-    /// words, verb first where it runs something (design system, "Menus").
+    /// The entries of a menu button's menu, filled each time it opens (kit KitMenuButton opens, places and closes it):
+    /// each with its icon (Segoe Fluent Icons, in the kit's menu column) and its words, verb first where it runs
+    /// something (design system, "Menus").
     /// </summary>
-    static void ShowMenu(FrameworkElement owner, params (string Glyph, string Text, Action Click)[] items)
+    static void FillMenu(ContextMenu menu, params (string Glyph, string Text, Action Click)[] items)
     {
-        var menu = new ContextMenu { PlacementTarget = owner, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
+        menu.Items.Clear();
         foreach (var (glyph, text, click) in items)
         {
             var item = new MenuItem { Header = text, Tag = glyph };
             item.Click += (_, _) => click();
             menu.Items.Add(item);
         }
-        menu.IsOpen = true;
     }
 
     /// <summary>A tab was chosen or the settings opened or closed (the kit's frame keeps the rules of tabs and gear).</summary>
@@ -196,7 +201,7 @@ public partial class MainWindow : Window
         }
         else if (e.Key == System.Windows.Input.Key.N && System.Windows.Input.Keyboard.Modifiers == System.Windows.Input.ModifierKeys.Control)
         {
-            AddPackage_Click(sender, e);
+            KitMenuButton.Toggle(AddButton, fromKeyboard: true, last: false);
             e.Handled = true;
         }
         else if (e.Key == System.Windows.Input.Key.Escape && GearButton.IsChecked == true)

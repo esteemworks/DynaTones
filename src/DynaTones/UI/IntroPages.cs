@@ -33,7 +33,6 @@ public partial class MainWindow
     /// </summary>
     void IntroChanged()
     {
-        PauseButton.Visibility = KitIntro.Pending ? Visibility.Collapsed : Visibility.Visible;
         UpdateAddButton();
         RefreshBackground();
     }
@@ -115,7 +114,8 @@ public partial class MainWindow
             OpenGallery();
         }));
         Button? own = null;
-        own = ActionTile(Glyph(""), Strings.T("Your own photos", "Eigene Fotos"), () => ShowAddMenu(own!));
+        own = ActionTile(Glyph(""), Strings.T("Your own photos", "Eigene Fotos"), null);
+        KitMenuButton.Attach(own, FillAddMenu);
         tiles.Children.Add(own);
         pictures.Children.Add(tiles);
         page.Children.Add(new Border { Style = S("Card"), Child = pictures, Padding = new Thickness(24, 20, 24, 20), Margin = new Thickness(0, 0, 0, 16) });
@@ -163,7 +163,7 @@ public partial class MainWindow
     }
 
     /// <summary>A way to more pictures, in the same size as a package.</summary>
-    Button ActionTile(FrameworkElement preview, string name, Action click)
+    Button ActionTile(FrameworkElement preview, string name, Action? click)
     {
         var tile = new Button
         {
@@ -175,7 +175,7 @@ public partial class MainWindow
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             VerticalContentAlignment = VerticalAlignment.Top,
         };
-        tile.Click += (_, _) => click();
+        if (click != null) tile.Click += (_, _) => click();
         Speak(tile, name);
         return tile;
     }

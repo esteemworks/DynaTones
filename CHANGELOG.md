@@ -4,6 +4,11 @@ All notable changes to DynaTones. Downloads will be on the [releases page](../..
 
 ## Not released yet
 
+- **Buttons that open a menu behave the same everywhere** (Add package, its tile, Pause, Switch to dark, Add profile
+  and every choice field in the settings): a second click closes the menu instead of opening it again, the menu opens
+  below its button and is at least as wide, the arrow points the way the menu opens, and Enter, Space and Down open it
+  with the first entry, Up with the last, Esc closes it and leaves the focus on the button. While paused, **Resume**
+  is a button of its own next to where Pause was: a button either does something or opens a menu, never both
 - **Sharing a profile on and off, without copies piling up.** Switching "Offer to all EsteemWorks apps" off while
   another app of the family uses the profile asks first, then DynaTones keeps a copy of its own; the other apps keep
   theirs, and what the profile changes in DynaTones (package, transition, lock screen, color mode, pointer) stays

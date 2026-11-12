@@ -24,18 +24,24 @@
                         </TextBlock.RenderTransform>
                     </TextBlock>
                 </Button>
-                <Button x:Name="PauseButton" Style="{StaticResource HeroButton}" Click="Pause_Click" Margin="0,0,8,0">
+                <!-- Pause opens how long (its menu, kit KitMenuButton, which draws the chevron); while paused Resume
+                     takes its place: a button acts or opens, never both (design system, "Menu buttons") -->
+                <Button x:Name="PauseButton" Style="{StaticResource HeroButton}" Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock x:Name="PauseIcon" FontFamily="{StaticResource IconFont}" Text="&#xE769;" FontSize="13" VerticalAlignment="Center" />
-                        <TextBlock x:Name="PauseText" Margin="8,0,0,0" />
-                        <TextBlock x:Name="PauseChevron" FontFamily="{StaticResource IconFont}" Text="&#xE70D;" FontSize="10" Margin="8,1,0,0" VerticalAlignment="Center" />
+                        <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE769;" FontSize="13" VerticalAlignment="Center" />
+                        <TextBlock x:Name="PauseText" Margin="8,0,0,0" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
-                <Button x:Name="AddButton" Style="{StaticResource PrimaryButton}" Click="AddPackage_Click">
+                <Button x:Name="ResumeButton" Style="{StaticResource HeroButton}" Click="Resume_Click" Margin="0,0,8,0" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE768;" FontSize="13" VerticalAlignment="Center" />
+                        <TextBlock x:Name="ResumeText" Margin="8,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="AddButton" Style="{StaticResource PrimaryButton}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE710;" FontSize="13" VerticalAlignment="Center" />
-                        <TextBlock x:Name="AddButtonText" Margin="8,0,0,0" />
-                        <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE70D;" FontSize="10" Margin="8,1,0,0" VerticalAlignment="Center" />
+                        <TextBlock x:Name="AddButtonText" Margin="8,0,0,0" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
             </kit:KitFrame.Actions>
