@@ -110,6 +110,18 @@ static class Snapshot
                         scroller.ScrollToHome();
                     }
                 }
+                // The subpages of the settings (About: Updates, Backup, Troubleshooting, Privacy), each opened from its row.
+                var subpages = window.SettingsNavRows().ToList();
+                for (var n = 0; n < subpages.Count; n++)
+                {
+                    window.Tabs.Last().Button.IsChecked = true;
+                    await Task.Delay(300);
+                    subpages[n].RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                    await Task.Delay(500);
+                    window.UpdateLayout();
+                    Save(window, Path.Combine(folder, $"settings-sub-{n + 1}-{suffix}.png"));
+                    window.CloseSettingsSubpage();
+                }
                 // The pages under Background, one after the other.
                 foreach (var name in MainWindow.BackgroundPages)
                 {

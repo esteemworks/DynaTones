@@ -1,6 +1,12 @@
 <Project>
   <!-- Written by EsteemWorks.Kit tools\pack.ps1. The kit's version in kit\, used when the kit's sources are not next to this repository. -->
   <PropertyGroup>
-    <EsteemWorksKitVersion>0.1.83</EsteemWorksKitVersion>
+    <EsteemWorksKitVersion>0.1.87</EsteemWorksKitVersion>
   </PropertyGroup>
+  <!-- When the app was built, and whether for a release (build.ps1 -Release): a build without a release shows its commit
+       and build time under Updates, so it can be told apart from the release of the same version (KitApp.VersionText). -->
+  <ItemGroup>
+    <AssemblyMetadata Include="EsteemWorksBuilt" Value="$([System.DateTime]::UtcNow.ToString('o'))" />
+    <AssemblyMetadata Include="EsteemWorksRelease" Value="true" Condition="'$(EsteemWorksRelease)' == 'true'" />
+  </ItemGroup>
 </Project>

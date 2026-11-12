@@ -194,6 +194,10 @@ public partial class MainWindow : Window
     void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         if (dialog.IsOpen) return;
+        // Esc in an open list or menu closes that list or menu only. The window sees keys first (Preview), and closed
+        // the whole settings or went back a page instead (found in the Sandbox, 12.11.2026).
+        if (e.Key == System.Windows.Input.Key.Escape && System.Windows.Input.Keyboard.FocusedElement is ComboBoxItem or MenuItem or ComboBox { IsDropDownOpen: true })
+            return;
         if (e.Key == System.Windows.Input.Key.F5)
         {
             Refresh_Click(sender, e);
@@ -204,7 +208,8 @@ public partial class MainWindow : Window
             KitMenuButton.Toggle(AddButton, fromKeyboard: true, last: false);
             e.Handled = true;
         }
-        else if (e.Key == System.Windows.Input.Key.Escape && GearButton.IsChecked == true)
+        // Esc on a subpage of the settings goes back (the kit's KitSubpage); only on the first page it closes them.
+        else if (e.Key == System.Windows.Input.Key.Escape && GearButton.IsChecked == true && KitSubpage.Depth(SettingsView) == 0)
         {
             GearButton.IsChecked = false;
             e.Handled = true;
@@ -407,23 +412,14 @@ public partial class MainWindow : Window
     // ---------- Location ----------
 
     /// <summary>
-    /// Where the sun is calculated, in the settings: set up once, rarely touched again. One card, as designed: the source
-    /// on the right of the title, then a small map with the place as a name a person knows, today's sunrise and sunset
-    /// and where the position came from; fields only for a place entered by hand, filled in.
+    /// The group "Location" of the settings (and of the introduction's second step): where DynaTones takes the place
+    /// from, the place it uses now with its map, and for an entered place the city and the coordinates. One control per
+    /// row (design system, "Settings pages, for every one").
     /// </summary>
     void BuildLocationCards(Panel parent)
     {
         var l = Engine.Settings.Location;
-        var stack = new StackPanel();
-        parent.Children.Add(new Border { Style = S("Card"), Child = stack, Padding = new Thickness(24, 20, 24, 20), Margin = new Thickness(0, 0, 0, 16) });
-        var head = new Grid { Margin = new Thickness(0, 0, 0, 16) };
-        head.ColumnDefinitions.Add(new ColumnDefinition());
-        head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var title = Ui.Horizontal(new TextBlock { Style = S("CardTitle"), Text = Strings.T("Location", "Standort"), VerticalAlignment = VerticalAlignment.Center },
-            new TextBlock { Style = S("InfoGlyph") });
-        title.ToolTip = Strings.T("DynaTones calculates the sun on this device. No internet, no account.", "DynaTones berechnet die Sonne auf diesem Gerät. Kein Internet, kein Konto.");
-        title.VerticalAlignment = VerticalAlignment.Center;
-        head.Children.Add(title);
+        var card = Ui.Section(parent, Strings.T("Location", "Standort"));
         // Windows' location strictly, an older choice, shows as the Windows location: the time zone is its fallback anyway.
         var shownMode = l.Mode == LocationMode.Windows ? LocationMode.Auto : l.Mode;
         var source = Locked(Ui.Segments(new[]
@@ -437,63 +433,47 @@ public partial class MainWindow : Window
             Strings.T("A city or coordinates you enter", "Eine Stadt oder Koordinaten, die du eingibst"),
             Strings.T("The main city of your time zone: needs nothing, but can be half an hour off", "Die Hauptstadt deiner Zeitzone: braucht nichts, kann aber eine halbe Stunde danebenliegen"),
         ]), Policies.LocationMode);
-        Grid.SetColumn(source, 1);
-        head.Children.Add(source);
-        stack.Children.Add(head);
+        Ui.Row(card, "\uE81D", Strings.T("Where the sun is calculated", "Wo die Sonne berechnet wird"), ModeHelp(l), source,
+            info: Strings.T("DynaTones calculates the sun on this device. No internet, no account.", "DynaTones berechnet die Sonne auf diesem Gerät. Kein Internet, kein Konto."));
 
+        // The place in use now: its name, sunrise and sunset and where it comes from, with the map.
         var current = Engine.Position;
-        var body = new Grid();
-        body.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        body.ColumnDefinitions.Add(new ColumnDefinition());
-        var map = new PlaceMap { Width = 200, Height = 110 };
+        var map = new PlaceMap { Width = 120, Height = 66 };
         if (current != null) map.Show(current.Latitude, current.Longitude);
-        body.Children.Add(new Border { CornerRadius = new CornerRadius(8), ClipToBounds = true, BorderBrush = B("Line"), BorderThickness = new Thickness(1), Child = map,
-            VerticalAlignment = VerticalAlignment.Top });
-        var facts = new StackPanel { Margin = new Thickness(20, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-        facts.Children.Add(new TextBlock { Style = S("CardTitle"), Text = current == null ? Strings.T("No position yet", "Noch kein Standort") : PlaceText(current, withCountry: true), TextWrapping = TextWrapping.Wrap });
+        var mapBox = new Border { CornerRadius = new CornerRadius(6), ClipToBounds = true, BorderBrush = B("Line"), BorderThickness = new Thickness(1), Child = map };
+        var facts = new List<string>();
         if (Engine.Plan?.Today is { } day)
-        {
-            var rise = day.Crossing(Sun.SunriseElevation, true);
-            var set = day.Crossing(Sun.SunriseElevation, false);
-            facts.Children.Add(new TextBlock { Style = S("RowLabel"), Margin = new Thickness(0, 4, 0, 0),
-                Text = Strings.T($"Sunrise {Fmt(rise)}, sunset {Fmt(set)}", $"Sonnenaufgang {Fmt(rise)}, Sonnenuntergang {Fmt(set)}") });
-        }
+            facts.Add(Strings.T($"Sunrise {Fmt(day.Crossing(Sun.SunriseElevation, true))}, sunset {Fmt(day.Crossing(Sun.SunriseElevation, false))}",
+                $"Sonnenaufgang {Fmt(day.Crossing(Sun.SunriseElevation, true))}, Sonnenuntergang {Fmt(day.Crossing(Sun.SunriseElevation, false))}"));
         if (current != null)
+            facts.Add(current.Source switch
+            {
+                LocationSource.Windows => Strings.T("from the Windows location, just now", "vom Windows-Standort, gerade eben"),
+                LocationSource.WindowsCached when l.LastWindows is { } w => Strings.T($"from the Windows location, {Ago(w.At)}", $"vom Windows-Standort, {Ago(w.At)}"),
+                LocationSource.WindowsCached => Strings.T("from the Windows location", "vom Windows-Standort"),
+                LocationSource.Coordinates => Strings.T("entered by you", "von dir eingegeben"),
+                _ => Strings.T("estimated from the time zone, can be up to half an hour off", "aus der Zeitzone geschätzt, kann bis zu einer halben Stunde danebenliegen"),
+            });
+        Ui.Row(card, "\uE707", current == null ? Strings.T("No position yet", "Noch kein Standort") : PlaceText(current, withCountry: true),
+            string.Join(Strings.T(", ", ", "), facts), mapBox);
+
+        // Windows' location: ask it once more, for example after it was switched on.
+        if (l.Mode is LocationMode.Auto or LocationMode.Windows)
         {
-            var from = current.Source switch
+            var again = Ui.Button(Strings.T("Ask again", "Erneut fragen"), async (_, _) =>
             {
-                LocationSource.Windows => Strings.T("From the Windows location, just now", "Vom Windows-Standort, gerade eben"),
-                LocationSource.WindowsCached when l.LastWindows is { } w => Strings.T($"From the Windows location, {Ago(w.At)}", $"Vom Windows-Standort, {Ago(w.At)}"),
-                LocationSource.WindowsCached => Strings.T("From the Windows location", "Vom Windows-Standort"),
-                LocationSource.Coordinates => Strings.T("Entered by you", "Von dir eingegeben"),
-                _ => Strings.T("Estimated from the time zone; the sun can be up to half an hour off", "Aus der Zeitzone geschätzt; die Sonne kann bis zu einer halben Stunde danebenliegen"),
-            };
-            var line = Ui.Horizontal(new TextBlock { Style = S("Muted"), Text = from, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap });
-            if (l.Mode is LocationMode.Auto or LocationMode.Windows)
-            {
-                var again = Ui.Button(Strings.T("Ask again", "Erneut fragen"), async (_, _) =>
-                {
-                    await Engine.RefreshLocationAsync(force: true);
-                    BuildSettingsPage();
-                }, "GhostButton").Tip(Strings.T("Asks Windows once more. On managed devices this is often switched off by policy.",
-                    "Fragt Windows noch einmal. Auf verwalteten Geräten ist das oft per Richtlinie aus."));
-                again.Margin = new Thickness(8, 0, 0, 0);
-                line.Children.Add(again);
-            }
-            line.Margin = new Thickness(0, 4, 0, 0);
-            facts.Children.Add(line);
+                await Engine.RefreshLocationAsync(force: true);
+                BuildSettingsPage();
+            });
+            Ui.Row(card, "\uE72C", Strings.T("Windows location", "Windows-Standort"),
+                Locator.LastWindowsProblem is { } problem
+                    ? problem + Strings.T(" DynaTones uses the next source.", " DynaTones nimmt die nächste Quelle.")
+                    : Strings.T("On managed devices often switched off by policy.", "Auf verwalteten Geräten oft per Richtlinie aus."), again);
         }
-        Grid.SetColumn(facts, 1);
-        body.Children.Add(facts);
-        stack.Children.Add(body);
-        if (Locator.LastWindowsProblem is { } problem && l.Mode is LocationMode.Auto or LocationMode.Windows)
-            Ui.Note(stack, problem + Strings.T(" DynaTones uses the next source.", " DynaTones nimmt die nächste Quelle."));
 
         if (l.Mode != LocationMode.Coordinates) return;
-        stack.Children.Add(new Border { Height = 14 });
-        var card = stack;
         // About 32,000 places: the list draws only what is in view.
-        var places = new ComboBox { Width = 300, IsEditable = true, IsTextSearchEnabled = true }
+        var places = new ComboBox { Width = 260, IsEditable = true, IsTextSearchEnabled = true }
             .Tip(Strings.T("Type the first letters to jump to a city.", "Die ersten Buchstaben tippen, um zu einer Stadt zu springen."));
         places.ItemsPanel = new ItemsPanelTemplate(new FrameworkElementFactory(typeof(VirtualizingStackPanel)));
         VirtualizingPanel.SetIsVirtualizing(places, true);
@@ -511,26 +491,22 @@ public partial class MainWindow : Window
                     c.Location.PlaceName = p.Label;
                 }, BuildSettingsPage);
         };
-        Ui.Row(card, Strings.T("City", "Stadt"), Strings.T("Every place with at least 15,000 inhabitants; for any other place enter its coordinates.",
-            "Jeder Ort mit mindestens 15.000 Einwohnern; für jeden anderen Ort seine Koordinaten eingeben."), places);
+        Ui.Row(card, "\uE80F", Strings.T("City", "Stadt"), Strings.T("Every place with at least 15,000 inhabitants", "Jeder Ort ab 15.000 Einwohnern"), places);
         var lat = Ui.Field(l.Latitude?.ToString("0.####", CultureInfo.InvariantCulture) ?? "", 100, text => SetCoordinate(text, true))
             .Tip(Strings.T("Latitude, -90 to 90. Enter confirms.", "Breite, -90 bis 90. Enter übernimmt."));
         Speak(lat, Strings.T("Latitude", "Breite"));
         var lon = Ui.Field(l.Longitude?.ToString("0.####", CultureInfo.InvariantCulture) ?? "", 100, text => SetCoordinate(text, false))
             .Tip(Strings.T("Longitude, -180 to 180. Enter confirms.", "Länge, -180 bis 180. Enter übernimmt."));
         Speak(lon, Strings.T("Longitude", "Länge"));
-        Ui.Row(card, Strings.T("Latitude and longitude", "Breite und Länge"),
-            Strings.T("In degrees, for example 52.21 and 8.36. South and west are negative.", "In Grad, etwa 52.21 und 8.36. Süd und West sind negativ."),
+        // Two fields that make one value: one control (design system).
+        Ui.Row(card, "\uE909", Strings.T("Latitude and longitude", "Breite und Länge"),
+            Strings.T("For any other place, in degrees; south and west are negative", "Für jeden anderen Ort, in Grad; Süd und West sind negativ"),
             Ui.Horizontal(lat, Ui.Spacer(), lon));
         Locked(places, Policies.Coordinates);
         Locked(lat, Policies.Coordinates);
         Locked(lon, Policies.Coordinates);
     }
 
-    /// <summary>
-    /// A fixed place starts from where DynaTones is now, so its fields are never empty; the city list or the
-    /// coordinates then change it.
-    /// </summary>
     void SetLocationMode(LocationMode mode) => ChangeAndRebuild(c =>
     {
         c.Location.Mode = mode;
@@ -581,87 +557,65 @@ public partial class MainWindow : Window
 
     static string ModeHelp(LocationSettings l) => l.Mode switch
     {
-        LocationMode.Windows => Strings.T("Only the Windows location; if it does not answer, the time zone.", "Nur der Windows-Standort; antwortet er nicht, die Zeitzone."),
-        LocationMode.Coordinates => Strings.T("The city or coordinates below.", "Die Stadt oder die Koordinaten unten."),
-        LocationMode.TimeZone => Strings.T("The main city of your time zone. Needs nothing, but can be half an hour off.",
-            "Die Hauptstadt deiner Zeitzone. Braucht nichts, kann aber eine halbe Stunde danebenliegen."),
+        LocationMode.Windows => Strings.T("Only the Windows location; if it does not answer, the time zone", "Nur der Windows-Standort; antwortet er nicht, die Zeitzone"),
+        LocationMode.Coordinates => Strings.T("The city or coordinates below", "Die Stadt oder die Koordinaten unten"),
+        LocationMode.TimeZone => Strings.T("The main city of your time zone. Needs nothing, but can be half an hour off",
+            "Die Hauptstadt deiner Zeitzone. Braucht nichts, kann aber eine halbe Stunde danebenliegen"),
         _ => l.Latitude != null && l.Longitude != null
-            ? Strings.T("The Windows location; if Windows does not answer, the fixed place set before, then the time zone.",
-                "Der Windows-Standort; antwortet Windows nicht, der früher gesetzte feste Ort, dann die Zeitzone.")
-            : Strings.T("The Windows location; if Windows does not answer, the time zone.", "Der Windows-Standort; antwortet Windows nicht, die Zeitzone."),
+            ? Strings.T("The Windows location; if Windows does not answer, the fixed place set before, then the time zone",
+                "Der Windows-Standort; antwortet Windows nicht, der früher gesetzte feste Ort, dann die Zeitzone")
+            : Strings.T("The Windows location; if Windows does not answer, the time zone", "Der Windows-Standort; antwortet Windows nicht, die Zeitzone"),
     };
 
     // ---------- Settings ----------
 
+    /// <summary>
+    /// The settings, one column of at most 760 px as in every app of the family (design system, "Settings pages, for
+    /// every one"): a label above each card, rows with an icon, a short visible description and one control. About,
+    /// Updates, Backup, Troubleshooting and Privacy are the kit's (AboutPage), with their subpages.
+    /// </summary>
     void BuildSettingsPage()
     {
         SettingsPanel.Children.Clear();
         var config = Engine.Settings;
-        var general = Ui.Card(SettingsPanel, Strings.T("General", "Allgemein"));
-        // Installed for all users, the device starts DynaTones and only an administrator changes that; with StartQueue
-        // installed, StartQueue starts it in its order and the switch goes through StartQueue.
-        var startToggle = Locked(Ui.Toggle(Autostart.IsOn, on => Autostart.Set(on)), Policies.StartWithWindows);
-        if (Autostart.ForAllUsers)
+        // The group General is the kit's, the same rows, words and controls in every app of the family (design system,
+        // "Settings pages": The group General is the kit's). DynaTones gives its values, policies and what Full adds.
+        KitSettingsPage.General(SettingsPanel, new GeneralSettings
         {
-            startToggle.IsEnabled = false;
-            startToggle.ToolTip = Strings.T("Installed for all users of this device: it starts for everyone, and only an administrator can change that.",
-                "Für alle Benutzer dieses Geräts installiert: Es startet bei allen, und nur ein Administrator kann das ändern.");
-            ToolTipService.SetShowOnDisabled(startToggle, true);
-        }
-        Ui.Row(general, Strings.T("Start with Windows", "Mit Windows starten"),
-            Autostart.ForAllUsers ? Strings.T("For all users of this device.", "Für alle Benutzer dieses Geräts.")
-            : Autostart.ManagedByStartQueue != null ? Strings.T("StartQueue starts DynaTones in its startup order.", "StartQueue startet DynaTones in seiner Startreihenfolge.")
-            : Strings.T("Through your own autostart entry; no admin rights.", "Über deinen eigenen Autostart-Eintrag; ohne Adminrechte."),
-            startToggle);
-        Ui.Row(general, Strings.T("Color mode of this window", "Farbmodus dieses Fensters"),
-            Strings.T("Only this window; the color mode of Windows is set under Color mode.",
-                "Nur dieses Fenster; den Farbmodus von Windows stellst du unter Farbmodus ein."), Ui.Segments(new[]
-        {
-            (ThemeChoice.System, Strings.T("Like Windows", "Wie Windows")),
-            (ThemeChoice.Light, Strings.T("Light", "Hell")),
-            (ThemeChoice.Dark, Strings.T("Dark", "Dunkel")),
-        }, config.WindowTheme, t =>
-        {
-            Change(c => c.WindowTheme = t);
-            Theme.Apply(t, Engine.Settings.Accent);
-        }));
-        AccentRow.Add(general, config.Accent, profiles: true, a =>
-        {
-            Change(c => c.Accent = a);
-            ShowProfileColor();
-            Theme.Apply(Engine.Settings.WindowTheme, a);
-        });
-        Ui.Row(general, Strings.T("Language", "Sprache"), Strings.T("Takes effect when the window opens again.", "Gilt, wenn das Fenster neu geöffnet wird."),
-            Locked(Ui.Choice(new[] { ((string?)null, Strings.T("Like Windows", "Wie Windows")), ("en", "English"), ("de", "Deutsch") },
-                config.Language, v => Change(c => c.Language = v), 200), Policies.Language), showHelp: true);
-        // Basic or Full, as chosen in the setup; Full later with one UAC prompt, and none after it (STANDARD "Full").
-        if (!KitApp.PerMachine)
-        {
-            FrameworkElement setup;
-            if (IsFull) setup = new TextBlock { Style = S("Value"), Text = Strings.T("Full", "Vollständig"), VerticalAlignment = VerticalAlignment.Center };
-            else
+            StartsItself = true,
+            StartPolicy = Policies.StartWithWindows,
+            Theme = config.WindowTheme,
+            SetTheme = t =>
             {
-                var shield = new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", FontSize = 13, Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center };
-                var full = new Button { Style = S("SecondaryButton"), Content = Ui.Horizontal(shield, new TextBlock { Text = Strings.T("Set up fully", "Vollständig einrichten"), VerticalAlignment = VerticalAlignment.Center }) }
-                    .Tip(Strings.T("Windows asks once for your confirmation. After that DynaTones does not ask again.",
-                        "Windows fragt einmal nach deiner Bestätigung. Danach fragt DynaTones nicht mehr."));
-                Speak(full, Strings.T("Set up fully", "Vollständig einrichten"));
-                full.Click += async (_, _) =>
+                Change(c => c.WindowTheme = t);
+                Theme.Apply(t, Engine.Settings.Accent);
+            },
+            Accent = config.Accent,
+            SetAccent = a =>
+            {
+                Change(c => c.Accent = a);
+                ShowProfileColor();
+                Theme.Apply(Engine.Settings.WindowTheme, a);
+            },
+            Profiles = true,
+            Language = config.Language,
+            SetLanguage = v => Change(c => c.Language = v),
+            LanguagePolicy = Policies.Language,
+            // Basic or Full, as chosen in the setup; Full later with one UAC prompt, and none after it (STANDARD "Full").
+            Setup = KitApp.PerMachine ? null : new GeneralSetup
+            {
+                IsFull = () => IsFull,
+                SetUpFully = async () =>
                 {
-                    full.IsEnabled = false;
                     await Task.Run(KitSetup.SetUpFull);
                     SignIn.Recheck();
                     BuildSettingsPage();
                     BuildBackground();
-                };
-                setup = full;
-            }
-            Ui.Row(general, Strings.T("Set up", "Einrichtung"), IsFull
-                ? Strings.T("Full, with admin rights: also the screen before signing in changes with the day.",
-                    "Vollständig, mit Adminrechten: Auch der Bildschirm vor der Anmeldung wechselt mit dem Tag.")
-                : Strings.T("Basic, without admin rights. Fully set up, the screen before signing in changes with the day too.",
-                    "Basis, ohne Adminrechte. Vollständig eingerichtet wechselt auch der Bildschirm vor der Anmeldung mit dem Tag."), setup);
-        }
+                },
+                FullAdds = Strings.T("Fully set up, the screen before signing in changes too", "Vollständig wechselt auch der Bildschirm vor der Anmeldung"),
+                FullGives = Strings.T("the screen before signing in changes with the day too", "auch der Bildschirm vor der Anmeldung wechselt mit dem Tag"),
+            },
+        });
 
         BuildLocationCards(SettingsPanel);
         AboutPage.Build(SettingsPanel);
@@ -669,7 +623,24 @@ public partial class MainWindow : Window
         if (Frame.IntroStepId == "place") Frame.RefreshStep();
     }
 
-    // ---------- Saving ----------
+    /// <summary>For the snapshot: the rows of the settings that open a subpage (not the ones that go to the web).</summary>
+    internal IEnumerable<NavRow> SettingsNavRows()
+    {
+        IEnumerable<NavRow> Walk(DependencyObject node)
+        {
+            for (var i = 0; i < VisualTreeHelper.GetChildrenCount(node); i++)
+            {
+                var child = VisualTreeHelper.GetChild(node, i);
+                if (child is NavRow row && row.Glyph != "") yield return row;
+                foreach (var inner in Walk(child)) yield return inner;
+            }
+        }
+        SettingsPanel.UpdateLayout();
+        return Walk(SettingsPanel).ToList();
+    }
+
+    /// <summary>For the snapshot: back from a subpage of the settings.</summary>
+    internal void CloseSettingsSubpage() => KitSubpage.Back(SettingsView, focus: false);
 
     void Change(Action<Config> change)
     {

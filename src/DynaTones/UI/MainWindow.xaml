@@ -82,7 +82,8 @@
 
         <!-- ========== Settings ========== -->
         <ScrollViewer x:Name="SettingsView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
-            <StackPanel x:Name="SettingsPanel" Margin="32,20,32,32" MaxWidth="1000" />
+            <!-- One column of at most 760 px, as in every app of the family (kit SettingsPage) -->
+            <StackPanel x:Name="SettingsPanel" Style="{StaticResource SettingsPage}" />
         </ScrollViewer>
 
         </kit:KitFrame>

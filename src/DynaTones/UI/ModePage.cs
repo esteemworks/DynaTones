@@ -40,13 +40,14 @@ public partial class MainWindow
         var head = new Grid();
         head.ColumnDefinitions.Add(new ColumnDefinition());
         head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var title = Ui.Horizontal(new TextBlock { Style = S("CardTitle"), Text = Strings.T("Light and dark with the day", "Hell und dunkel mit dem Tag"), VerticalAlignment = VerticalAlignment.Center },
             new TextBlock { Style = S("InfoGlyph") });
         title.ToolTip = Strings.T("The same setting as Windows Settings > Personalization > Colors. Works without admin rights.",
             "Dieselbe Einstellung wie in den Windows-Einstellungen unter Personalisierung > Farben. Geht ohne Adminrechte.");
         title.VerticalAlignment = VerticalAlignment.Center;
         head.Children.Add(title);
+        // One control per row (design system, "Settings pages"): the switch in the title's row, how it switches below.
+        Border? how = null;
         if (a.Enabled)
         {
             var trigger = Ui.Segments(new[]
@@ -59,17 +60,18 @@ public partial class MainWindow
                 Strings.T("At two fixed clock times every day", "Zu zwei festen Uhrzeiten an jedem Tag"),
                 Strings.T("Dark while the picture shown belongs below the horizon: always goes with the background", "Dunkel, solange das gezeigte Bild unter den Horizont gehört: passt immer zum Hintergrund"),
             ]);
-            trigger.Margin = new Thickness(16, 0, 16, 0);
-            Grid.SetColumn(trigger, 1);
-            head.Children.Add(trigger);
+            trigger.HorizontalAlignment = HorizontalAlignment.Left;
+            trigger.Margin = new Thickness(0, 12, 0, 0);
+            how = trigger;
         }
         var toggle = Locked(Ui.Toggle(a.Enabled, on => ChangeAndRebuild(c => c.Appearance.Enabled = on, BuildModePage)), Policies.ColorModeEnabled)
             .Tip(Strings.T("Off: DynaTones leaves the color mode to you and only changes the background.", "Aus: DynaTones überlässt den Farbmodus dir und wechselt nur den Hintergrund."));
         toggle.VerticalAlignment = VerticalAlignment.Center;
         Speak(toggle, Strings.T("Switch the color mode with the day", "Farbmodus mit dem Tag umschalten"));
-        Grid.SetColumn(toggle, 2);
+        Grid.SetColumn(toggle, 1);
         head.Children.Add(toggle);
         top.Children.Add(head);
+        if (how != null) top.Children.Add(how);
 
         if (!a.Enabled)
         {

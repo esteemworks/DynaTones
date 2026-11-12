@@ -118,7 +118,7 @@ public partial class MainWindow
         KitMenuButton.Attach(own, FillAddMenu);
         tiles.Children.Add(own);
         pictures.Children.Add(tiles);
-        page.Children.Add(new Border { Style = S("Card"), Child = pictures, Padding = new Thickness(24, 20, 24, 20), Margin = new Thickness(0, 0, 0, 16) });
+        page.Children.Add(new Border { Style = S("Card"), Child = pictures, Padding = new Thickness(24, 20, 24, 20), Margin = new Thickness(0, 24, 0, 16) });
 
         // Light and dark: one switch, as the card's only row (no line above it).
         var mode = new Grid();

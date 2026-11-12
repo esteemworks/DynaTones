@@ -4,6 +4,10 @@ All notable changes to DynaTones. Downloads will be on the [releases page](../..
 
 ## Not released yet
 
+- **The settings as in every EsteemWorks app:** one calm column, a name above each group (General, Location, About
+  DynaTones, More from EsteemWorks), and every row with an icon, a short line saying what it does and one control.
+  The accent color is a choice field. Updates, Back up settings, Troubleshooting and Privacy open pages of their own;
+  Back or Esc returns to the same place. Under Color mode the way it switches has its own line below the switch
 - **Buttons that open a menu behave the same everywhere** (Add package, its tile, Pause, Switch to dark, Add profile
   and every choice field in the settings): a second click closes the menu instead of opening it again, the menu opens
   below its button and is at least as wide, the arrow points the way the menu opens, and Enter, Space and Down open it
