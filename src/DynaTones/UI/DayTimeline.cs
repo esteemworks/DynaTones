@@ -26,7 +26,6 @@ public sealed class DayTimeline : FrameworkElement
     {
         Fit();
         Theme.Changed += InvalidateVisual;
-        ToolTipService.SetInitialShowDelay(this, 100);
     }
 
     /// <summary>The lock screen's own strip, when it has a package of its own.</summary>
@@ -200,11 +199,21 @@ public sealed class DayTimeline : FrameworkElement
                 var label = new FormattedText(Strings.Time(from) + (slot.Mirrored ? " \u21BA" : ""), Strings.Culture, FlowDirection.LeftToRight,
                     new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal), 11, Brushes.White, dpi);
                 var pill = new Rect(r.X + 4, r.Y + 4, label.Width + 8, label.Height + 2);
+                // The now line runs on top: a time under it would be cut in two. The time moves to the right of the
+                // line, or stays away when the picture has no room for it there (the tooltip still says it).
+                if (NowX(day) is { } nowX && nowX >= pill.Left - 2 && nowX <= pill.Right + 2)
+                {
+                    if (nowX + 4 + pill.Width > r.Right - 4) continue;
+                    pill.X = nowX + 4;
+                }
                 dc.DrawRoundedRectangle(new SolidColorBrush(Color.FromArgb(0xA0, 0, 0, 0)), null, pill, 4, 4);
                 dc.DrawText(label, new Point(pill.X + 4, pill.Y + 1));
             }
         }
     }
+
+    /// <summary>Where the now line runs, when it shows.</summary>
+    double? NowX(SunDay day) => showNow && plan != null && plan.At >= day.Start && plan.At <= day.End ? X(plan.At) : null;
 
     /// <summary>A name in the left column, beside a band or strip.</summary>
     void Mark(DrawingContext dc, string name, double top, double height, Brush brush, double dpi)

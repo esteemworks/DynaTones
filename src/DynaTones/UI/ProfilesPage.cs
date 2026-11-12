@@ -80,8 +80,12 @@ public partial class MainWindow
             Speak(chip, profile.Name);
             chips.Children.Add(chip);
         }
-        var add = Ui.Button(Strings.T("+ Profile", "+ Profil"), (s, _) => ShowProfileAddMenu((FrameworkElement)s));
-        add.Margin = new Thickness(0, 0, 6, 6);
+        // The one text action of this place (GhostButton), as the design system's table names it: Add profile.
+        var add = new Button { Style = S("GhostButton"), Margin = new Thickness(4, 0, 6, 6), Content = Ui.Horizontal(
+            new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", FontSize = 14, VerticalAlignment = VerticalAlignment.Center },
+            new TextBlock { Text = Strings.T("Add profile", "Profil hinzufügen"), Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center }) };
+        add.Click += (s, _) => ShowProfileAddMenu((FrameworkElement)s);
+        Speak(add, Strings.T("Add profile", "Profil hinzufügen"));
         chips.Children.Add(add);
         bar.Children.Add(chips);
         var now = new TextBlock { Style = S("Muted"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 6),
@@ -98,7 +102,7 @@ public partial class MainWindow
             Ui.Note(empty, Strings.T(
                 "A profile changes some of DynaTones' settings at certain times or when you choose it: its own package, transition, lock screen, color mode or pointer. Everything else stays as set under Background and Color mode. A profile can be shared with StartQueue and the other EsteemWorks apps, so one schedule switches them all.",
                 "Ein Profil ändert zu bestimmten Zeiten oder wenn du es wählst einige Einstellungen von DynaTones: eigenes Paket, Übergang, Sperrbildschirm, Farbmodus oder Mauszeiger. Alles andere bleibt, wie unter Hintergrund und Farbmodus eingestellt. Ein Profil lässt sich mit StartQueue und den anderen EsteemWorks-Apps teilen, dann schaltet ein Zeitplan alle um."));
-            var first = Ui.Button(Strings.T("New profile", "Neues Profil"), (s, _) => ShowProfileAddMenu((FrameworkElement)s), "PrimaryButton");
+            var first = Ui.Button(Strings.T("New profile", "Neues Profil"), (s, _) => ShowProfileAddMenu((FrameworkElement)s));
             first.HorizontalAlignment = HorizontalAlignment.Left;
             first.Margin = new Thickness(0, 12, 0, 8);
             empty.Children.Add(first);
@@ -108,12 +112,12 @@ public partial class MainWindow
 
         // ---------- The chosen profile ----------
         var card = new StackPanel();
-        ProfilesPanel.Children.Add(new Border { Style = S("Card"), Child = card, Padding = new Thickness(24, 18, 24, 18), Margin = new Thickness(0, 0, 0, 16) });
+        ProfilesPanel.Children.Add(new Border { Style = S("Card"), Child = card, Padding = new Thickness(24, 20, 24, 20), Margin = new Thickness(0, 0, 0, 16) });
         var head = new Grid { Margin = new Thickness(0, 0, 0, 14) };
         head.ColumnDefinitions.Add(new ColumnDefinition());
         head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var title = new StackPanel();
-        title.Children.Add(new TextBlock { Style = S("H2"), Text = shown.Name });
+        title.Children.Add(new TextBlock { Style = S("CardTitle"), Text = shown.Name });
         var when = Ui.Horizontal(new TextBlock { Style = S("Muted"), Text = FamilyProfiles.Describe(all, shown, DateTime.Now), VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap });
         var change = Ui.Button(Strings.T("Change", "Ändern"), (_, _) => EditProfile(shown.Id), "GhostButton")
             .Tip(Strings.T("Name, color, days and hours, for every app that uses the profile.", "Name, Farbe, Tage und Uhrzeiten, für alle Apps, die das Profil nutzen."));
@@ -235,8 +239,8 @@ public partial class MainWindow
         }
         else
         {
-            var tag = new Border { CornerRadius = new CornerRadius(4), Padding = new Thickness(6, 1, 6, 2), Margin = new Thickness(8, 0, 0, 0), Background = B("ChipBg"), VerticalAlignment = VerticalAlignment.Center,
-                Child = new TextBlock { Text = Strings.T("taken over", "übernommen"), FontSize = 11, Foreground = B("ChipText") } };
+            var tag = new Border { Style = S("Chip"), Margin = new Thickness(8, 0, 0, 0),
+                Child = new TextBlock { Style = S("ChipLabel"), Text = Strings.T("taken over", "übernommen") } };
             tag.ToolTip = Strings.T("Taken over from your settings under Background and Color mode. A choice here applies only in this profile.",
                 "Aus deinen Einstellungen unter Hintergrund und Farbmodus übernommen. Eine Auswahl gilt nur in diesem Profil.");
             name.Children.Add(tag);
@@ -254,11 +258,11 @@ public partial class MainWindow
 
     void ShowProfileAddMenu(FrameworkElement owner)
     {
-        var items = new List<(string, Action)> { (Strings.T("New profile", "Neues Profil"), () => EditProfile(null)) };
+        var items = new List<(string, string, Action)> { ("", Strings.T("Create a new profile", "Neues Profil anlegen"), () => EditProfile(null)) };
         foreach (var offered in FamilyProfiles.Offered(Profiles.App))
         {
             var from = string.Join(", ", offered.Apps);
-            items.Add((Strings.T($"{offered.Name} (from {from})", $"{offered.Name} (aus {from})"), () => TakeOverProfile(offered.Id)));
+            items.Add(("", Strings.T($"Take over \"{offered.Name}\" from {from}", $"„{offered.Name}“ aus {from} übernehmen"), () => TakeOverProfile(offered.Id)));
         }
         ShowMenu(owner, items.ToArray());
     }
@@ -278,6 +282,7 @@ public partial class MainWindow
         if (id != null) shownProfile = id;
         ShowProfileColor();
         BuildProfilesPage();
+        UpdateAddButton();
         ProfilesView?.ScrollToHome();
     }
 
@@ -296,7 +301,7 @@ public partial class MainWindow
         ProfilesPanel.Children.Add(head);
 
         var card = new StackPanel();
-        ProfilesPanel.Children.Add(new Border { Style = S("Card"), Child = card, Padding = new Thickness(24, 18, 24, 18) });
+        ProfilesPanel.Children.Add(new Border { Style = S("Card"), Child = card, Padding = new Thickness(24, 20, 24, 20) });
         if (profileFields.Parent is Panel old) old.Children.Remove(profileFields);
         var editing = newProfile ? null : FamilyProfiles.Find(shownProfile ?? Guid.Empty);
         profileFields.Load(editing, Profiles.All);
@@ -305,7 +310,7 @@ public partial class MainWindow
         profileFields.AppPart.Children.Add(new TextBlock { Style = S("Muted"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 12, 0, 0),
             Text = Strings.T("What the profile changes in DynaTones is set on the Profiles page after saving.", "Was das Profil in DynaTones ändert, stellst du nach dem Speichern auf der Seite Profile ein.") });
 
-        var buttons = new Grid { Margin = new Thickness(0, 18, 0, 0) };
+        var buttons = new Grid { Margin = new Thickness(0, 20, 0, 0) };
         if (editing != null)
         {
             var delete = Ui.Button(Strings.T("Delete profile", "Profil löschen"), async (_, _) =>
@@ -322,7 +327,7 @@ public partial class MainWindow
                 Change(c => c.Profiles.Remove(editing.Id));
                 shownProfile = null;
                 CloseProfileEditor();
-            }, "GhostButton");
+            }, "QuietButton");
             delete.HorizontalAlignment = HorizontalAlignment.Left;
             buttons.Children.Add(delete);
         }
@@ -366,6 +371,7 @@ public partial class MainWindow
         editingProfile = false;
         ShowProfileColor();
         BuildProfilesPage();
+        UpdateAddButton();
     }
 
     /// <summary>A note on the pages under Background and Color mode while a profile changes what they set.</summary>

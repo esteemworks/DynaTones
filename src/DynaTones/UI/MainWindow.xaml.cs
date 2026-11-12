@@ -138,18 +138,21 @@ public partial class MainWindow : Window
             return;
         }
         ShowMenu(PauseButton,
-            (Strings.T("For an hour", "Für eine Stunde"), () => host.Pause(DateTime.Now.AddHours(1))),
-            (Strings.T("Until tomorrow morning", "Bis morgen früh"), () => host.Pause(TrayHost.TomorrowMorning)),
-            (Strings.T("Until I resume", "Bis ich fortsetze"), () => host.Pause(TrayHost.Forever)));
+            ("", Strings.T("For an hour", "Für eine Stunde"), () => host.Pause(DateTime.Now.AddHours(1))),
+            ("", Strings.T("Until tomorrow morning", "Bis morgen früh"), () => host.Pause(TrayHost.TomorrowMorning)),
+            ("", Strings.T("Until I resume", "Bis ich fortsetze"), () => host.Pause(TrayHost.Forever)));
     }
 
-    /// <summary>A small menu under a button.</summary>
-    static void ShowMenu(FrameworkElement owner, params (string Text, Action Click)[] items)
+    /// <summary>
+    /// A small menu under a button: each entry with its icon (Segoe Fluent Icons, in the kit's menu column) and its
+    /// words, verb first where it runs something (design system, "Menus").
+    /// </summary>
+    static void ShowMenu(FrameworkElement owner, params (string Glyph, string Text, Action Click)[] items)
     {
         var menu = new ContextMenu { PlacementTarget = owner, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
-        foreach (var (text, click) in items)
+        foreach (var (glyph, text, click) in items)
         {
-            var item = new MenuItem { Header = text };
+            var item = new MenuItem { Header = text, Tag = glyph };
             item.Click += (_, _) => click();
             menu.Items.Add(item);
         }
@@ -180,6 +183,7 @@ public partial class MainWindow : Window
         if (profiles && ProfilesView.Visibility != Visibility.Visible) BuildProfilesPage();
         ProfilesView.Visibility = Shown(profiles);
         SettingsView.Visibility = Shown(settings);
+        UpdateAddButton();
     }
 
     void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -300,7 +304,7 @@ public partial class MainWindow : Window
         // The action docks at the bottom, so the cards of a row end on one line whatever their texts.
         var dock = new DockPanel { LastChildFill = true };
         var stack = new StackPanel();
-        var preview = new Border { Height = 174, CornerRadius = new CornerRadius(6), ClipToBounds = true, Background = (Brush)FindResource("Surface2") };
+        var preview = new Border { Height = 174, CornerRadius = new CornerRadius(6), ClipToBounds = true, Background = B("Surface2") };
         if (entry.PreviewFile is { } file)
         {
             // Read off the window's thread, like every picture.
@@ -311,16 +315,16 @@ public partial class MainWindow : Window
             if (ThumbCache.Get(file, 640, Show) != null) Show();
         }
         stack.Children.Add(preview);
-        stack.Children.Add(new TextBlock { Style = (Style)FindResource("RowLabel"), Text = entry.DisplayName, Margin = new Thickness(0, 10, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis });
+        stack.Children.Add(new TextBlock { Style = (Style)FindResource("RowLabel"), Text = entry.DisplayName, Margin = new Thickness(0, 12, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis });
         if (entry.DescriptionShown is { Length: > 0 } description)
-            stack.Children.Add(new TextBlock { Style = (Style)FindResource("Help"), Text = description, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
+            stack.Children.Add(new TextBlock { Style = (Style)FindResource("Help"), Text = description, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) });
 
         var facts = new List<string>();
         if (StyleName(entry.Style) is { Length: > 0 } style) facts.Add(style);
         if (entry.Images > 0) facts.Add(Strings.T($"{entry.Images} images", $"{entry.Images} Bilder"));
         if (entry.Size > 0) facts.Add($"{entry.Size / 1048576.0:0} MB");
         if (entry.AiMade) facts.Add(Strings.T("made with AI", "mit KI erstellt"));
-        stack.Children.Add(new TextBlock { Style = (Style)FindResource("Muted"), Text = string.Join(", ", facts), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 10) });
+        stack.Children.Add(new TextBlock { Style = (Style)FindResource("Muted"), Text = string.Join(", ", facts), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 12) });
 
         UIElement action;
         if (adding.Contains(entry.Id))
@@ -338,7 +342,7 @@ public partial class MainWindow : Window
         }
         else
         {
-            var add = Ui.Button(Strings.T("Add", "Hinzufügen"), (_, _) => _ = AddFromGalleryAsync(entry), "PrimaryButton")
+            var add = Ui.Button(Strings.T("Add", "Hinzufügen"), (_, _) => _ = AddFromGalleryAsync(entry))
                 .Tip(Strings.T("Downloads the package and sets it up for the day. The first package becomes the background.",
                     "Lädt das Paket und stellt es auf den Tag ein. Das erste Paket wird der Hintergrund."));
             Speak(add, Strings.T($"Add {entry.DisplayName}", $"{entry.DisplayName} hinzufügen"));
@@ -348,7 +352,7 @@ public partial class MainWindow : Window
         DockPanel.SetDock(action, Dock.Bottom);
         dock.Children.Add(action);
         dock.Children.Add(stack);
-        return new Border { Style = (Style)FindResource("Card"), Child = dock, Margin = new Thickness(6, 0, 6, 12), Padding = new Thickness(12) };
+        return new Border { Style = (Style)FindResource("Card"), Child = dock, Margin = new Thickness(6, 0, 6, 12), Padding = new Thickness(16) };
     }
 
     static string StyleName(string? style) => style switch
@@ -406,8 +410,8 @@ public partial class MainWindow : Window
     {
         var l = Engine.Settings.Location;
         var stack = new StackPanel();
-        parent.Children.Add(new Border { Style = S("Card"), Child = stack, Padding = new Thickness(24, 16, 24, 18), Margin = new Thickness(0, 0, 0, 16) });
-        var head = new Grid { Margin = new Thickness(0, 0, 0, 14) };
+        parent.Children.Add(new Border { Style = S("Card"), Child = stack, Padding = new Thickness(24, 20, 24, 20), Margin = new Thickness(0, 0, 0, 16) });
+        var head = new Grid { Margin = new Thickness(0, 0, 0, 16) };
         head.ColumnDefinitions.Add(new ColumnDefinition());
         head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var title = Ui.Horizontal(new TextBlock { Style = S("CardTitle"), Text = Strings.T("Location", "Standort"), VerticalAlignment = VerticalAlignment.Center },
@@ -441,7 +445,7 @@ public partial class MainWindow : Window
         body.Children.Add(new Border { CornerRadius = new CornerRadius(8), ClipToBounds = true, BorderBrush = B("Line"), BorderThickness = new Thickness(1), Child = map,
             VerticalAlignment = VerticalAlignment.Top });
         var facts = new StackPanel { Margin = new Thickness(20, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-        facts.Children.Add(new TextBlock { Style = S("H2"), Text = current == null ? Strings.T("No position yet", "Noch kein Standort") : PlaceText(current, withCountry: true), TextWrapping = TextWrapping.Wrap });
+        facts.Children.Add(new TextBlock { Style = S("CardTitle"), Text = current == null ? Strings.T("No position yet", "Noch kein Standort") : PlaceText(current, withCountry: true), TextWrapping = TextWrapping.Wrap });
         if (Engine.Plan?.Today is { } day)
         {
             var rise = day.Crossing(Sun.SunriseElevation, true);
@@ -471,7 +475,7 @@ public partial class MainWindow : Window
                 again.Margin = new Thickness(8, 0, 0, 0);
                 line.Children.Add(again);
             }
-            line.Margin = new Thickness(0, 2, 0, 0);
+            line.Margin = new Thickness(0, 4, 0, 0);
             facts.Children.Add(line);
         }
         Grid.SetColumn(facts, 1);

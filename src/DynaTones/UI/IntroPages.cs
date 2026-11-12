@@ -34,8 +34,18 @@ public partial class MainWindow
     void IntroChanged()
     {
         PauseButton.Visibility = KitIntro.Pending ? Visibility.Collapsed : Visibility.Visible;
-        AddButton.Style = S(Frame.LookingAround ? "HeroButton" : "PrimaryButton");
+        UpdateAddButton();
         RefreshBackground();
+    }
+
+    /// <summary>
+    /// One primary per view: Add package is the window's, except while looking around ("Switch on" is the main action
+    /// then) and in the profile editor, whose Save is the view's one primary.
+    /// </summary>
+    void UpdateAddButton()
+    {
+        var editorShown = editingProfile && ProfilesView.Visibility == Visibility.Visible;
+        AddButton.Style = S(Frame.LookingAround || editorShown ? "HeroButton" : "PrimaryButton");
     }
 
     /// <summary>For the snapshot: the step <paramref name="index"/> of the introduction, or looking around (-1).</summary>
@@ -71,7 +81,7 @@ public partial class MainWindow
         list.Children.Add(Feature("", Strings.T("Everything stays in your hands", "Alles bleibt in deiner Hand"),
             Strings.T("Pause, the next picture or the other color mode, with one click, also from the tray.",
                 "Pausieren, das nächste Bild oder der andere Farbmodus, mit einem Klick, auch aus dem Tray."), false));
-        page.Children.Add(new Border { Style = S("Card"), Child = list, Padding = new Thickness(24, 6, 24, 6), Margin = new Thickness(0, 0, 0, 16) });
+        page.Children.Add(new Border { Style = S("Card"), Child = list, Padding = new Thickness(24, 8, 24, 8), Margin = new Thickness(0, 0, 0, 16) });
         page.Children.Add(Notice(Strings.T(
             "So far DynaTones has only looked and changed nothing. Your background and light or dark stay as they are until you switch it on.",
             "Bisher hat DynaTones nur nachgesehen und nichts geändert. Dein Hintergrund und der Farbmodus bleiben, wie sie sind, bis du es einschaltest.")));
@@ -108,7 +118,7 @@ public partial class MainWindow
         own = ActionTile(Glyph(""), Strings.T("Your own photos", "Eigene Fotos"), () => ShowAddMenu(own!));
         tiles.Children.Add(own);
         pictures.Children.Add(tiles);
-        page.Children.Add(new Border { Style = S("Card"), Child = pictures, Padding = new Thickness(24, 16, 24, 18), Margin = new Thickness(0, 0, 0, 16) });
+        page.Children.Add(new Border { Style = S("Card"), Child = pictures, Padding = new Thickness(24, 20, 24, 20), Margin = new Thickness(0, 0, 0, 16) });
 
         // Light and dark: one switch, as the card's only row (no line above it).
         var mode = new Grid();
@@ -127,7 +137,7 @@ public partial class MainWindow
         System.Windows.Automation.AutomationProperties.SetHelpText(toggle, help);
         Grid.SetColumn(toggle, 1);
         mode.Children.Add(toggle);
-        page.Children.Add(new Border { Style = S("Card"), Child = mode, Padding = new Thickness(24, 16, 24, 16) });
+        page.Children.Add(new Border { Style = S("Card"), Child = mode, Padding = new Thickness(24, 20, 24, 20) });
         return page;
     }
 
@@ -145,17 +155,9 @@ public partial class MainWindow
             if (!chosen) click();
         };
         stack.Children.Add(radio);
-        var card = new Border
-        {
-            Padding = new Thickness(8),
-            Margin = new Thickness(0, 0, 10, 0),
-            CornerRadius = new CornerRadius(8),
-            BorderThickness = new Thickness(chosen ? 2 : 1),
-            BorderBrush = chosen ? B("Accent") : B("Line"),
-            Background = chosen ? B("Selected") : B("Surface"),
-            Cursor = System.Windows.Input.Cursors.Hand,
-            Child = stack,
-        };
+        var card = ChoiceCard(stack, chosen, new Thickness(0, 0, 8, 0));
+        card.Padding = new Thickness(8);
+        card.Cursor = System.Windows.Input.Cursors.Hand;
         card.MouseLeftButtonUp += (_, _) => radio.IsChecked = true;
         return card;
     }
@@ -167,7 +169,7 @@ public partial class MainWindow
         {
             Style = S("SecondaryButton"),
             Content = TileContent(preview, name),
-            Margin = new Thickness(0, 0, 10, 0),
+            Margin = new Thickness(0, 0, 8, 0),
             Padding = new Thickness(8),
             Height = double.NaN,
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
@@ -256,14 +258,15 @@ public partial class MainWindow
 
     // ---------- Parts ----------
 
+    // The page's heading in the family's h2 (20/900): heavier, not much bigger (design system, "Hierarchy from weight").
     TextBlock Heading(string text) => new()
     {
-        Text = text, FontSize = 24, FontWeight = FontWeights.Bold, Foreground = B("Text1"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 8),
+        Text = text, Style = S("H2"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 8),
     };
 
     TextBlock Lead(string text) => new()
     {
-        Text = text, FontSize = 14, Foreground = B("Text2"), TextWrapping = TextWrapping.Wrap, LineHeight = 21, Margin = new Thickness(0, 0, 0, 18),
+        Text = text, FontSize = 14, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 16),
     };
 
     FrameworkElement Feature(string glyph, string title, string text, bool line)
@@ -271,10 +274,10 @@ public partial class MainWindow
         var row = new Grid { Margin = new Thickness(0, 12, 0, 12) };
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(40) });
         row.ColumnDefinitions.Add(new ColumnDefinition());
-        row.Children.Add(new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = glyph, FontSize = 20, Foreground = B("Accent"), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 2, 0, 0) });
+        row.Children.Add(new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = glyph, FontSize = 20, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 2, 0, 0) });
         var words = new StackPanel();
-        words.Children.Add(new TextBlock { Text = title, FontWeight = FontWeights.SemiBold, Foreground = B("Text1"), TextWrapping = TextWrapping.Wrap });
-        words.Children.Add(new TextBlock { Text = text, Style = S("Muted"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) });
+        words.Children.Add(new TextBlock { Text = title, Style = S("RowLabel"), FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
+        words.Children.Add(new TextBlock { Text = text, Style = S("Muted"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) });
         Grid.SetColumn(words, 1);
         row.Children.Add(words);
         if (!line) return row;

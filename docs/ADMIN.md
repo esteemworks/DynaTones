@@ -159,7 +159,7 @@ it with the same times.
 
 ### The gallery
 
-The gallery (Background, Add package, From the gallery) lists packages to add with one click. By default it reads `packages.json` from the release
+The gallery (Background, Add package, Choose from the gallery) lists packages to add with one click. By default it reads `packages.json` from the release
 "packages" of DynaTones on GitHub, only when the user opens it. For an organization's own gallery, put a folder with
 `packages.json`, the packages as `.zip` (pictures and `dynatones.json`) and a preview `.jpg` each on a share, and set
 `PackageGallery` to it; `tools\packages\galerie.py` in the repository makes all three from folders of pictures.

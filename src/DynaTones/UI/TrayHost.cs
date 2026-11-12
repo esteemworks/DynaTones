@@ -44,7 +44,7 @@ public sealed class TrayHost : IDisposable
             tray.Add(Strings.T("Next image", "Nächstes Bild"), () => Engine.SkipNext());
             // The color mode: the other one now, or the whole next phase with its image; the words follow the mode.
             switchItem = tray.Add(Strings.T("Switch to dark", "Auf Dunkel umschalten"), () => Engine.SwitchMode());
-            jumpItem = tray.Add(Strings.T("Next dark phase, with its picture", "Nächste dunkle Phase, mit Bild"), () => Engine.JumpToMode());
+            jumpItem = tray.Add(Strings.T("Jump to the next dark phase", "Zur nächsten dunklen Phase springen"), () => Engine.JumpToMode());
             tray.AddMenu(Strings.T("Pause", "Pausieren"),
                 (Strings.T("For an hour", "Für eine Stunde"), () => Pause(DateTime.Now.AddHours(1))),
                 (Strings.T("Until tomorrow morning", "Bis morgen früh"), () => Pause(TomorrowMorning)),
@@ -158,8 +158,8 @@ public sealed class TrayHost : IDisposable
     /// <summary>The next phase of the other mode with its image, or back to the plan while a mode is held.</summary>
     public static string JumpText(Plan? plan) =>
         plan?.ModeHeld == true ? Strings.T("Back to the plan", "Zurück zum Plan")
-        : plan?.Dark == true ? Strings.T("Next light phase, with its picture", "Nächste helle Phase, mit Bild")
-        : Strings.T("Next dark phase, with its picture", "Nächste dunkle Phase, mit Bild");
+        : plan?.Dark == true ? Strings.T("Jump to the next light phase", "Zur nächsten hellen Phase springen")
+        : Strings.T("Jump to the next dark phase", "Zur nächsten dunklen Phase springen");
 
     public void Dispose()
     {

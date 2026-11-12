@@ -40,7 +40,7 @@ public partial class MainWindow
 
         // ---------- Left: the package ----------
         var left = new StackPanel();
-        columns.Children.Add(new Border { Style = S("Card"), Child = left, Padding = new Thickness(20, 18, 20, 18), VerticalAlignment = VerticalAlignment.Top });
+        columns.Children.Add(new Border { Style = S("Card"), Child = left, Padding = new Thickness(20, 20, 20, 20), VerticalAlignment = VerticalAlignment.Top });
         left.Children.Add(p.Images.Count > 0 ? DayStrip(p, 110, 640)
             : new Border { Height = 110, CornerRadius = new CornerRadius(6), Background = B("Surface2"),
                 Child = new TextBlock { Style = S("Muted"), Text = Strings.T("No pictures yet", "Noch keine Bilder"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } });
@@ -153,7 +153,7 @@ public partial class MainWindow
             {
                 x.Wallpaper.PackageId = p.Id;
                 x.Wallpaper.Enabled = true;
-            }, BuildBackground), "PrimaryButton"), Policies.ManagedPackageFolder));
+            }, BuildBackground)), Policies.ManagedPackageFolder));
         if (p.Images.Count > 0 && !(c.LockScreen.Enabled && c.LockScreen.Source == LockScreenSource.Package && c.LockScreen.PackageId == p.Id))
             Add(use, Locked(Ui.Button(Strings.T("Use for the lock screen", "Für den Sperrbildschirm verwenden"), (_, _) => SetLock(LockScreenSource.Package, p.Id)), Policies.LockScreenEnabled));
         Add(use, Ui.Button(Strings.T("Export as file", "Als Datei exportieren"), (_, _) => ExportPackage(p))
@@ -231,7 +231,8 @@ public partial class MainWindow
             RemoveImage(p, image);
         };
         var menu = new ContextMenu();
-        var remove = new MenuItem { Header = Strings.T("Remove", "Entfernen"), InputGestureText = Strings.T("Del", "Entf") };
+        // An icon, the verb first, the key at the right; the dangerous entry red (design system, "Menus").
+        var remove = new MenuItem { Header = Strings.T("Remove", "Entfernen"), InputGestureText = Strings.T("Del", "Entf"), Tag = "", Style = S("DangerMenuItem") };
         remove.Click += (_, _) => RemoveImage(p, image);
         menu.Items.Add(remove);
         button.ContextMenu = menu;
@@ -267,8 +268,8 @@ public partial class MainWindow
     {
         var stack = new StackPanel { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
         stack.Children.Add(new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", FontSize = 16, HorizontalAlignment = HorizontalAlignment.Center });
-        stack.Children.Add(new TextBlock { Style = S("RowLabel"), Text = Strings.T("Pictures", "Bilder"), Margin = new Thickness(0, 6, 0, 0), HorizontalAlignment = HorizontalAlignment.Center });
-        var button = new Button { Style = S("SecondaryButton"), Height = double.NaN, Margin = new Thickness(4, 4, 4, 10), VerticalAlignment = VerticalAlignment.Stretch, Content = stack };
+        stack.Children.Add(new TextBlock { Style = S("RowLabel"), Text = Strings.T("Add pictures", "Bilder hinzufügen"), Margin = new Thickness(0, 8, 0, 0), HorizontalAlignment = HorizontalAlignment.Center });
+        var button = new Button { Style = S("SecondaryButton"), Height = double.NaN, Margin = new Thickness(4, 4, 4, 8), VerticalAlignment = VerticalAlignment.Stretch, Content = stack };
         button.ToolTip = Strings.T("Adds JPEG or PNG pictures; Auto places them in the day.", "Fügt JPEG- oder PNG-Bilder hinzu; Auto verteilt sie über den Tag.");
         Speak(button, Strings.T("Add pictures", "Bilder hinzufügen"));
         button.Click += async (_, _) =>

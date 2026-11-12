@@ -75,7 +75,7 @@ drag. Apps, taskbar and Start, and the mouse pointer each have a small picture o
 pointer package (a folder or `.zip` with `.cur` and `.ani` files) is added with one click, for your user only.
 
 Dark now, or light now, from the tray or next to **Next image**: **Switch to dark** changes only the color mode and
-keeps the picture; **Next dark phase, with its picture** shows both as they will be when dark next begins, the
+keeps the picture; **Jump to the next dark phase** shows both as they will be when dark next begins, the
 picture of that moment included. Either holds until the plan gets there by itself, then the day goes on as planned.
 While paused, it stays as you set it until you resume.
 

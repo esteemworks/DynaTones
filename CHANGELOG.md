@@ -4,6 +4,24 @@ All notable changes to DynaTones. Downloads will be on the [releases page](../..
 
 ## Not released yet
 
+- **One main button per view, quieter everywhere else.** Add package in the header is the window's one main button;
+  in the gallery every Add, on a package's page Use for the desktop, and in the profile editor the header's button
+  step back, so Save is the editor's one. Next image and Switch to dark under The day are quiet text buttons with an
+  icon, Add profile is the one text action of the Profiles page, Delete profile is neutral
+- **Light and dark while the window is open:** every part of a page now changes with the window. Before, parts built
+  in light stayed light when the window turned dark (white lines and dark titles in the introduction, the frame of
+  the map)
+- **Chosen is one look:** a chosen card (transition, lock screen, anchor, the pictures of the introduction) and a
+  package in use take the chosen surface with a thin line, as everywhere in the family, instead of a thick colored
+  border; nothing shifts when the choice moves
+- **Menus speak in verbs and show icons:** Choose from the gallery, Add a folder of pictures, Open a package file,
+  Make a package of your own; Switch only the color mode, Jump to the next dark phase; Create a new profile, Take
+  over a profile from another app. Remove in a picture's menu is red, as a dangerous entry is
+- **Calmer type and spacing:** headings are heavier, not bigger (the introduction's headings, the place under
+  Location and a profile's name now follow the family's sizes), and every gap sits on the 4 px grid. Background fits
+  the window at its normal size without scrolling, and the gallery's Back lines up with its cards
+- A pointer package that was added says so in a notification instead of a message to click away
+- The timeline's tooltip opens after the family's usual rest of the pointer, no longer at once
 - **Calmer colors:** switches and radio buttons in one solid tone; the gradient stays in the bar below the header
   and on the main button. Menus grow out of the button they open from
 - **The keyboard, as in every EsteemWorks app:** the tabs and the segments in the settings are one Tab stop each, the

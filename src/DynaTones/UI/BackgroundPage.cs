@@ -28,7 +28,42 @@ public partial class MainWindow
     string? shownKey;
 
     Style S(string key) => (Style)FindResource(key);
-    Brush B(string key) => (Brush)FindResource(key);
+
+    readonly List<(WeakReference<SolidColorBrush> Brush, string Key)> followers = [];
+    bool brushesFollow;
+
+    /// <summary>
+    /// A token as a brush for elements built in code. A plain lookup would keep the colors of the moment it was built,
+    /// so a page built light stayed light in parts when the window turned dark (white lines, dark titles on dark,
+    /// 12.11.2026). The brush is the window's own and is recolored on every change of the theme, without building the
+    /// page again (which would take the focus away).
+    /// </summary>
+    Brush B(string key)
+    {
+        if (FindResource(key) is not SolidColorBrush source) return (Brush)FindResource(key);
+        if (!brushesFollow)
+        {
+            brushesFollow = true;
+            void Recolor() => Dispatcher.BeginInvoke(RecolorBrushes);
+            Theme.Changed += Recolor;
+            Closed += (_, _) => Theme.Changed -= Recolor;
+        }
+        if (followers.Count > 4000) followers.RemoveAll(f => !f.Brush.TryGetTarget(out _));
+        var brush = new SolidColorBrush(source.Color) { Opacity = source.Opacity };
+        followers.Add((new WeakReference<SolidColorBrush>(brush), key));
+        return brush;
+    }
+
+    void RecolorBrushes()
+    {
+        followers.RemoveAll(f => !f.Brush.TryGetTarget(out _));
+        foreach (var (weak, key) in followers)
+            if (weak.TryGetTarget(out var brush) && TryFindResource(key) is SolidColorBrush now)
+            {
+                brush.Color = now.Color;
+                brush.Opacity = now.Opacity;
+            }
+    }
 
     // ---------- Navigation ----------
 
@@ -148,7 +183,7 @@ public partial class MainWindow
         BackgroundPanel.Children.Add(tiles);
 
         var card = new StackPanel();
-        BackgroundPanel.Children.Add(new Border { Style = S("Card"), Child = card, Padding = new Thickness(24, 16, 24, 14), Margin = new Thickness(0, 0, 0, 20) });
+        BackgroundPanel.Children.Add(new Border { Style = S("Card"), Child = card, Padding = new Thickness(24, 16, 24, 16), Margin = new Thickness(0, 0, 0, 16) });
 
         // The day: the sun, light and dark, and the pictures in the order they show, for today or another date. Its
         // actions on the right: Next image (today only), Back to the plan, and the date.
@@ -177,8 +212,13 @@ public partial class MainWindow
             }
             if (c.Wallpaper.Enabled && Engine.Package != null && plan.Current != null)
             {
-                var skip = Ui.Button(Strings.T("Next image", "Nächstes Bild"), (_, _) => Engine.SkipNext())
-                    .Tip(Strings.T("Shows the next image of the day now and keeps to it until its own time; then the day goes on as planned.",
+                // Side actions of the day, in text (QuietButton): the window's one primary is in the header.
+                var skip = new Button { Style = S("QuietButton"), Content = Ui.Horizontal(
+                    new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", FontSize = 14, VerticalAlignment = VerticalAlignment.Center },
+                    new TextBlock { Text = Strings.T("Next image", "Nächstes Bild"), Margin = new Thickness(8, 0, 0, 0) }) };
+                skip.Click += (_, _) => Engine.SkipNext();
+                Speak(skip, Strings.T("Next image", "Nächstes Bild"));
+                skip.Tip(Strings.T("Shows the next image of the day now and keeps to it until its own time; then the day goes on as planned.",
                         "Zeigt das nächste Bild des Tages sofort und bleibt dabei bis zu seiner eigenen Zeit; danach geht der Tag wie geplant weiter.") + pausedNote);
                 skip.IsEnabled = plan.Next != null;
                 dateRow.Children.Add(skip);
@@ -225,12 +265,12 @@ public partial class MainWindow
     UIElement Warning(string text) => new Border
     {
         CornerRadius = new CornerRadius(8),
-        Padding = new Thickness(14, 10, 14, 10),
+        Padding = new Thickness(16, 12, 16, 12),
         Margin = new Thickness(0, 0, 0, 12),
         Background = B("WarnBg"),
         Child = Ui.Horizontal(
             new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", Foreground = B("WarnText"), VerticalAlignment = VerticalAlignment.Center },
-            new TextBlock { Text = text, Foreground = B("WarnText"), Margin = new Thickness(10, 0, 0, 0), TextWrapping = TextWrapping.Wrap }),
+            new TextBlock { Text = text, Foreground = B("WarnText"), Margin = new Thickness(12, 0, 0, 0), TextWrapping = TextWrapping.Wrap }),
     };
 
     static string PictureName(PackageImage image) => image.DisplayName;
@@ -328,7 +368,7 @@ public partial class MainWindow
             new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = glyph, FontSize = 14, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 1, 8, 0) },
             new TextBlock { Style = S("CardTitle"), Text = title, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center }));
         text.Children.Add(new TextBlock { Style = S("RowLabel"), Text = line, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 6, 0, 0) });
-        text.Children.Add(new TextBlock { Style = S("Muted"), Text = when, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
+        text.Children.Add(new TextBlock { Style = S("Muted"), Text = when, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) });
         Grid.SetColumn(text, 1);
         grid.Children.Add(text);
         var chevron = new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "\uE76C", FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Foreground = B("Text4") };
@@ -419,7 +459,12 @@ public partial class MainWindow
             VerticalContentAlignment = VerticalAlignment.Top,
             Content = stack,
         };
-        if (uses.Count > 0) button.BorderBrush = B("Accent");
+        // In use: the chosen state, as a choice card shows it (Selected with SelectedLine); the words say where.
+        if (uses.Count > 0)
+        {
+            button.BorderBrush = B("SelectedLine");
+            button.Background = B("Selected");
+        }
         button.Click += (_, _) => OpenPage(BgPage.Package, p.Id);
         Speak(button, p.DisplayName);
         return button;
@@ -550,7 +595,7 @@ public partial class MainWindow
             var chosen = value;
             radio.Checked += (_, _) => { if (!selected) set(chosen); };
             stack.Children.Add(radio);
-            if (!last) stack.Children.Add(new TextBlock { Style = S("Muted"), Text = help, Margin = new Thickness(28, 2, 0, 0) });
+            if (!last) stack.Children.Add(new TextBlock { Style = S("Muted"), Text = help, Margin = new Thickness(28, 4, 0, 0) });
             else
             {
                 var minutes = Ui.Choice(new[] { (10, Strings.T("10 minutes", "10 Minuten")), (30, Strings.T("30 minutes", "30 Minuten")), (60, Strings.T("60 minutes", "60 Minuten")) },
@@ -559,16 +604,8 @@ public partial class MainWindow
                 stack.Children.Add(Ui.Horizontal(new TextBlock { Style = S("Muted"), Text = Strings.T("over", "über"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(28, 0, 8, 0) }, minutes));
                 ((FrameworkElement)stack.Children[^1]).Margin = new Thickness(0, 4, 0, 0);
             }
-            grid.Children.Add(new Border
-            {
-                Padding = new Thickness(12, 10, 12, 10),
-                Margin = i == 0 ? new Thickness(0, 0, 6, 0) : last ? new Thickness(6, 0, 0, 0) : new Thickness(3, 0, 3, 0),
-                CornerRadius = new CornerRadius(8),
-                BorderThickness = new Thickness(selected ? 2 : 1),
-                BorderBrush = selected ? B("Accent") : B("Line"),
-                Background = selected ? B("Selected") : B("Surface"),
-                Child = stack,
-            });
+            grid.Children.Add(ChoiceCard(stack, selected,
+                i == 0 ? new Thickness(0, 0, 4, 0) : last ? new Thickness(4, 0, 0, 0) : new Thickness(4, 0, 4, 0)));
         }
         return grid;
     }
@@ -727,7 +764,7 @@ public partial class MainWindow
         picture.CornerRadius = new CornerRadius(6);
         if (path == null) picture.Child = new TextBlock { Style = S("Muted"), Text = Strings.T("Picture from Windows", "Bild aus Windows"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         stack.Children.Add(picture);
-        var radio = new RadioButton { Content = title, IsChecked = selected, GroupName = "lock", Margin = new Thickness(0, 10, 0, 2), FontWeight = FontWeights.SemiBold, IsEnabled = !locked };
+        var radio = new RadioButton { Content = title, IsChecked = selected, GroupName = "lock", Margin = new Thickness(0, 8, 0, 4), FontWeight = FontWeights.SemiBold, IsEnabled = !locked };
         radio.Checked += (_, _) =>
         {
             if (!selected) choose();
@@ -746,16 +783,7 @@ public partial class MainWindow
             }
             stack.Children.Add(extra);
         }
-        return new Border
-        {
-            Padding = new Thickness(12),
-            Margin = margin,
-            CornerRadius = new CornerRadius(8),
-            BorderThickness = new Thickness(selected ? 2 : 1),
-            BorderBrush = selected ? B("Accent") : B("Line"),
-            Background = selected ? B("Selected") : B("Surface"),
-            Child = stack,
-        };
+        return ChoiceCard(stack, selected, margin);
     }
 
     /// <summary>
@@ -804,14 +832,14 @@ public partial class MainWindow
 
         var left = new StackPanel { Width = 420 };
         left.Children.Add(Picture(p.PathOf(image), 420, 236, 840));
-        left.Children.Add(new TextBlock { Style = S("Muted"), Text = Strings.T($"{image.File}, picture {index + 1} of {p.Images.Count} in {p.DisplayName}", $"{image.File}, Bild {index + 1} von {p.Images.Count} in {p.DisplayName}"), Margin = new Thickness(0, 10, 0, 0), TextWrapping = TextWrapping.Wrap });
+        left.Children.Add(new TextBlock { Style = S("Muted"), Text = Strings.T($"{image.File}, picture {index + 1} of {p.Images.Count} in {p.DisplayName}", $"{image.File}, Bild {index + 1} von {p.Images.Count} in {p.DisplayName}"), Margin = new Thickness(0, 8, 0, 0), TextWrapping = TextWrapping.Wrap });
         left.Children.Add(new TextBlock { Style = S("RowLabel"), Text = Hours(p, index), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) });
         grid.Children.Add(left);
 
         var right = new StackPanel();
         Grid.SetColumn(right, 2);
         grid.Children.Add(right);
-        right.Children.Add(new TextBlock { Style = S("CardTitle"), Text = Strings.T("When this picture begins", "Wann dieses Bild beginnt"), Margin = new Thickness(0, 0, 0, 10) });
+        right.Children.Add(new TextBlock { Style = S("CardTitle"), Text = Strings.T("When this picture begins", "Wann dieses Bild beginnt"), Margin = new Thickness(0, 0, 0, 12) });
         var a = image.Anchor;
 
         var autoText = image.Suggested is { } s
@@ -895,17 +923,24 @@ public partial class MainWindow
             f.Margin = new Thickness(28, 4, 0, 0);
             stack.Children.Add(f);
         }
-        return new Border
-        {
-            Padding = new Thickness(14, 10, 14, 12),
-            Margin = new Thickness(0, 0, 0, 8),
-            CornerRadius = new CornerRadius(8),
-            BorderThickness = new Thickness(selected ? 2 : 1),
-            BorderBrush = selected ? B("Accent") : B("Line"),
-            Background = selected ? B("Selected") : B("Surface"),
-            Child = stack,
-        };
+        return ChoiceCard(stack, selected, new Thickness(0, 0, 0, 8));
     }
+
+    /// <summary>
+    /// A choice among large choices with a picture or more than a line (transition, lock screen, anchor, the pictures of
+    /// the introduction): as the kit's RadioCard, the chosen one takes Selected with a 1 px SelectedLine, so nothing
+    /// jumps when the choice moves and the accent stays for the radio button itself.
+    /// </summary>
+    Border ChoiceCard(UIElement child, bool selected, Thickness margin) => new()
+    {
+        Padding = new Thickness(12),
+        Margin = margin,
+        CornerRadius = new CornerRadius(8),
+        BorderThickness = new Thickness(1),
+        BorderBrush = selected ? B("SelectedLine") : B("Line"),
+        Background = selected ? B("Selected") : B("Surface"),
+        Child = child,
+    };
 
     /// <summary>When the picture shows today, and in June and December, so moving it with the sun is easy to judge.</summary>
     string Hours(Package p, int index)
@@ -962,11 +997,11 @@ public partial class MainWindow
     void ShowAddMenu(FrameworkElement owner)
     {
         if (!Policies.UsersMayImport) return;
-        var items = new List<(string, Action)>();
-        if (Gallery.Source != null) items.Add((Strings.T("From the gallery", "Aus der Galerie"), OpenGallery));
-        items.Add((Strings.T("Folder of pictures", "Ordner mit Bildern"), ImportFolder));
-        items.Add((Strings.T("File (.zip or .ddw)", "Datei (.zip oder .ddw)"), ImportFile));
-        items.Add((Strings.T("New package of your own", "Neues eigenes Paket"), NewPackage));
+        var items = new List<(string, string, Action)>();
+        if (Gallery.Source != null) items.Add(("", Strings.T("Choose from the gallery", "Aus der Galerie wählen"), OpenGallery));
+        items.Add(("", Strings.T("Add a folder of pictures", "Ordner mit Bildern hinzufügen"), ImportFolder));
+        items.Add(("", Strings.T("Open a package file (.zip, .ddw)", "Paketdatei öffnen (.zip, .ddw)"), ImportFile));
+        items.Add(("", Strings.T("Make a package of your own", "Eigenes Paket anlegen"), NewPackage));
         ShowMenu(owner, items.ToArray());
     }
 
@@ -1074,7 +1109,7 @@ public partial class MainWindow
         var content = Ui.Horizontal(
             new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = toDark ? "" : "", FontSize = 13, VerticalAlignment = VerticalAlignment.Center },
             new TextBlock { Text = TrayHost.SwitchText(plan), Margin = new Thickness(8, 0, 0, 0) });
-        var button = new Button { Style = S("SecondaryButton"), Content = content };
+        var button = new Button { Style = S("QuietButton"), Content = content };
         Speak(button, TrayHost.SwitchText(plan));
         if (plan.Dark == null)
         {
@@ -1083,13 +1118,13 @@ public partial class MainWindow
                 "Schaltet den Farbmodus von Windows für Apps und Windows um, wie die Einstellungen."));
         }
         content.Children.Add(new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", FontSize = 10, Margin = new Thickness(8, 1, 0, 0), VerticalAlignment = VerticalAlignment.Center });
-        var phase = toDark ? Strings.T("dark", "dunkle") : Strings.T("light", "helle");
-        var entries = new List<(string, Action)>
+        var phase = toDark ? Strings.T("dark", "dunklen") : Strings.T("light", "hellen");
+        var entries = new List<(string, string, Action)>
         {
-            (Strings.T("Only the color mode, the picture stays", "Nur den Farbmodus, das Bild bleibt"), Engine.SwitchMode),
+            (toDark ? "" : "", Strings.T("Switch only the color mode", "Nur den Farbmodus umschalten"), Engine.SwitchMode),
         };
         if (plan.NextModeChange is { } at)
-            entries.Add((Strings.T($"The next {phase} phase with its picture, as at {Strings.Time(at)}", $"Die nächste {phase} Phase mit ihrem Bild, wie um {Strings.Time(at)}"),
+            entries.Add(("", Strings.T($"Jump to the next {phase} phase with its picture, as at {Strings.Time(at)}", $"Zur nächsten {phase} Phase mit ihrem Bild springen, wie um {Strings.Time(at)}"),
                 () => Engine.JumpToMode()));
         button.Click += (_, _) => ShowMenu(button, [.. entries]);
         var until = plan.NextModeChange is { } next ? Strings.Time(next) : Strings.T("the next change", "zum nächsten Wechsel");

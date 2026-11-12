@@ -26,6 +26,10 @@ $data = "$env:APPDATA\DynaTones"
 for ($i = 0; $i -lt 30 -and -not (Test-Path "$data\bundled-packages.txt"); $i++) { Start-Sleep 1 }
 Get-Process DynaTones -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep 2
+# --switch-on can reach the copy the setup started before it listens, and the mark of a new installation stays; then
+# every page would show the introduction. The pictures are of DynaTones switched on (the introduction has its own).
+Remove-Item "$data\not-switched-on" -Force -ErrorAction SilentlyContinue
+Test-Check 'switched on' (-not (Test-Path "$data\not-switched-on"))
 function Run($arguments) { Start-Process $exe -ArgumentList $arguments -Wait -WindowStyle Hidden }
 
 # A Tuesday afternoon in November: light mode, the afternoon picture, the sun low; no sample profile applies.
@@ -77,6 +81,11 @@ Test-Check 'pages drawn' ($pictures.Count -ge 20) "$($pictures.Count) pictures"
 foreach ($name in 'background-light', 'background-dark', 'mode-light', 'profiles-light', 'settings-dark', 'gallery-light') {
     Test-Check "picture $name" (Test-Path "$shots\$name.png")
 }
+# The start page fits the window at its normal size (kit STANDARD, section 4: no -end picture of it).
+Test-Check 'Background fits without scrolling' (-not (Test-Path "$shots\background-end-light.png"))
+# The introduction of a new installation, in this process only (nothing is written).
+Run @('--snapshot', "`"$out\intro`"", '4', 'intro')
+Test-Check 'introduction drawn' (Test-Path "$out\intro\intro-welcome-dark.png")
 $env:DYNATONES_DRYRUN = $null
 
 Uninstall-App

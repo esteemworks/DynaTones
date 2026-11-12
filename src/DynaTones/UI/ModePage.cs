@@ -36,7 +36,7 @@ public partial class MainWindow
 
         // ---------- Light and dark with the day ----------
         var top = new StackPanel();
-        ModePanel.Children.Add(new Border { Style = S("Card"), Child = top, Padding = new Thickness(24, 16, 24, 18), Margin = new Thickness(0, 0, 0, 16) });
+        ModePanel.Children.Add(new Border { Style = S("Card"), Child = top, Padding = new Thickness(24, 20, 24, 20), Margin = new Thickness(0, 0, 0, 16) });
         var head = new Grid();
         head.ColumnDefinitions.Add(new ColumnDefinition());
         head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -73,7 +73,7 @@ public partial class MainWindow
 
         if (!a.Enabled)
         {
-            top.Children.Add(new TextBlock { Style = S("Muted"), Margin = new Thickness(0, 10, 0, 0), TextWrapping = TextWrapping.Wrap,
+            top.Children.Add(new TextBlock { Style = S("Muted"), Margin = new Thickness(0, 12, 0, 0), TextWrapping = TextWrapping.Wrap,
                 Text = Strings.T("DynaTones leaves the color mode to you and only changes the background.", "DynaTones überlässt den Farbmodus dir und wechselt nur den Hintergrund.") });
         }
         else
@@ -180,7 +180,7 @@ public partial class MainWindow
         var ink = light ? (dark ? Color.FromRgb(0xE8, 0xC0, 0x5A) : Color.FromRgb(0xB8, 0x86, 0x0B)) : (dark ? Color.FromRgb(0xA9, 0xAE, 0xE8) : Color.FromRgb(0x3F, 0x43, 0x78));
         var row = new WrapPanel { VerticalAlignment = VerticalAlignment.Center };
         TextBlock Word(string text) => new() { Style = S("RowLabel"), Text = text, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
-        row.Children.Add(new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = light ? "" : "", FontSize = 15, Foreground = new SolidColorBrush(ink), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) });
+        row.Children.Add(new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = light ? "" : "", FontSize = 15, Foreground = new SolidColorBrush(ink), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
         row.Children.Add(Word(light ? Strings.T("Light from", "Hell ab") : Strings.T("Dark from", "Dunkel ab")));
         if (a.Trigger == AppearanceTrigger.Sun)
         {
@@ -246,7 +246,7 @@ public partial class MainWindow
     StackPanel ChangeCard(Panel parent, string title, string help, FrameworkElement? action = null)
     {
         var stack = new StackPanel();
-        var head = new Grid { Margin = new Thickness(0, 0, 0, 10), MinHeight = 28 };
+        var head = new Grid { Margin = new Thickness(0, 0, 0, 12), MinHeight = 28 };
         head.ColumnDefinitions.Add(new ColumnDefinition());
         head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var name = Ui.Horizontal(new TextBlock { Style = S("CardTitle"), Text = title, VerticalAlignment = VerticalAlignment.Center }, new TextBlock { Style = S("InfoGlyph") });
@@ -267,7 +267,7 @@ public partial class MainWindow
     /// <summary>Two pictures side by side, labelled Day and Night.</summary>
     UIElement Pair(UIElement day, UIElement night)
     {
-        var grid = new UniformGrid { Columns = 2, Margin = new Thickness(0, 0, 0, 10) };
+        var grid = new UniformGrid { Columns = 2, Margin = new Thickness(0, 0, 0, 12) };
         foreach (var element in new[] { day, night })
             if (element is Border b)
             {
@@ -357,7 +357,9 @@ public partial class MainWindow
         {
             var name = await Task.Run(() => PointerPackages.Import(source));
             BuildModePage();
-            _ = this.dialog.ShowMessageAsync(Strings.T("Pointer package added", "Zeigerpaket hinzugefügt"), Strings.T($"\"{name}\" can now be chosen for day or night.", $"„{name}“ ist jetzt für Tag oder Nacht wählbar."));
+            // Telling, not asking: a notification, not a dialog (design system, "Notifications").
+            this.dialog.Notices.Show(Strings.T($"Pointer package \"{name}\" added; it can now be chosen for day or night.",
+                $"Zeigerpaket „{name}“ hinzugefügt; es ist jetzt für Tag oder Nacht wählbar."), NoticeKind.Done);
         }
         catch (Exception ex)
         {
