@@ -51,12 +51,14 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// With the accent "Profile", the window takes on the color of the profile it shows: the one being edited, else
+    /// With the accent "Profile", the window takes on the color of a profile, as in every family app (kit
+    /// KitProfiles.ColorSource): the one being edited, else the one chosen in the bar while the Profiles tab shows, else
     /// the one that applies now; without a profile DynaTones' own (STANDARD, "Appearance follows the profile").
     /// </summary>
     void ShowProfileColor()
     {
-        var profile = editingProfile && shownProfile is { } id ? FamilyProfiles.Find(id) : Engine.ActiveProfile;
+        var shown = ProfilesView.Visibility == Visibility.Visible && shownProfile is { } id ? FamilyProfiles.Find(id) : null;
+        var profile = KitProfiles.ColorSource(editedProfile, shown, Engine.ActiveProfile);
         Theme.Show(profile == null ? null : FamilyProfiles.ColorOf(FamilyProfiles.Current.Profiles, profile));
     }
 
@@ -189,6 +191,7 @@ public partial class MainWindow : Window
         ProfilesView.Visibility = Shown(profiles);
         SettingsView.Visibility = Shown(settings);
         UpdateAddButton();
+        ShowProfileColor();
     }
 
     void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)

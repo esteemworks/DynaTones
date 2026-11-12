@@ -39,12 +39,11 @@ public partial class MainWindow
 
     /// <summary>
     /// One primary per view: Add package is the window's, except while looking around ("Switch on" is the main action
-    /// then) and in the profile editor, whose Save is the view's one primary.
+    /// then) and on a page of the Profiles tab (editor, pause), whose Save is the view's one primary.
     /// </summary>
     void UpdateAddButton()
     {
-        var editorShown = editingProfile && ProfilesView.Visibility == Visibility.Visible;
-        AddButton.Style = S(Frame.LookingAround || editorShown ? "HeroButton" : "PrimaryButton");
+        AddButton.Style = S(Frame.LookingAround || ProfilePageOpen ? "HeroButton" : "PrimaryButton");
     }
 
     /// <summary>For the snapshot: the step <paramref name="index"/> of the introduction, or looking around (-1).</summary>

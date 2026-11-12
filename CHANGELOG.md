@@ -4,6 +4,14 @@ All notable changes to DynaTones. Downloads will be on the [releases page](../..
 
 ## Not released yet
 
+- **Profiles work as in every EsteemWorks app.** The profiles are chips in their order of precedence, with
+  "No profile" last; a ring marks the one that applies now, a pause sign the paused ones. Drag a chip to change
+  the order, or right-click it to edit, use it by hand (until the end of its time or until you switch back), pause
+  it, give it higher or lower precedence or remove it. The line under the chips says when the profile applies and
+  offers Back to the schedule, Order, Pause and Edit. Editing, the pause and the order open as pages of the tab;
+  Back or Esc returns to the same place. New: **pausing a profile** (for a time or until you resume it) and **the
+  order of the profiles** as a list with arrows. "For all EsteemWorks apps" is set in the editor, as in the other
+  apps. What a profile changes in DynaTones stays on the tab, under the chips
 - **Explorer no longer flickers during a flowing transition.** With Windows' "accent color from the background" on,
   Windows worked out a new accent for every picture in between, once a minute, and told every window; Explorer in
   dark mode then flashed its scroll bars. While pictures in between show, DynaTones now switches that automatic off

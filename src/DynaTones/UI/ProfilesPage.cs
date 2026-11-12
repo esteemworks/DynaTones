@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -8,33 +9,73 @@ using EsteemWorks.Kit.UI;
 namespace DynaTones.UI;
 
 /// <summary>
-/// The Profiles tab, as designed: the profiles as chips with "+ Profile" (new, or one another EsteemWorks app offers),
-/// which one applies now; for the chosen one what it changes in DynaTones, each value either its own (with a reset)
-/// or "übernommen" from the settings under Background and Color mode; "For all EsteemWorks apps"; and the week, which
-/// profile applies when. Name, color and schedule are edited on a page of their own with the family's shared fields.
+/// The Profiles tab. Everything about profiles that every EsteemWorks app has comes from the kit (KitProfiles, design
+/// system principle 8 "Same purpose, same piece"): the bar of chips with "No profile" and "+ Profile", the line under
+/// it with its actions, the chips' menu (edit, use by hand, pause, precedence, remove), the editor, the pause and the
+/// order as pages of this tab, and the week. DynaTones adds only its own: for the profile chosen in the bar what it
+/// changes in DynaTones, each value either its own (with a reset) or "übernommen" from the settings under Background
+/// and Color mode.
 /// </summary>
 public partial class MainWindow
 {
+    /// <summary>The profile chosen in the bar; null for "No profile".</summary>
     Guid? shownProfile;
-    bool editingProfile;
-    bool newProfile;
-    readonly ProfileFields profileFields = new(Profiles.App);
+    /// <summary>A profile was chosen in the bar; until then it shows the one that applies.</summary>
+    bool profileChosen;
+    /// <summary>The profile the kit's editor shows, whose color the window takes meanwhile.</summary>
+    FamilyProfile? editedProfile;
+
+    ProfileHost? profileHost;
+    ProfileBar? profileBar;
+    readonly StackPanel profileBody = new();
 
     bool profilesFollow;
     Guid? profilesShownActive;
 
-    void BuildProfilesPage()
+    /// <summary>What DynaTones gives the kit's profile pieces: the profile shown, what a profile changes in DynaTones.</summary>
+    ProfileHost ProfileHost => profileHost ??= new ProfileHost
+    {
+        App = Profiles.App,
+        Shown = () => shownProfile,
+        Show = id =>
+        {
+            shownProfile = id;
+            profileChosen = true;
+            // The kit builds its bar anew right after; building it here too took the keyboard focus off the chip.
+            BuildProfilesPage(refreshBar: false);
+            ShowProfileColor();
+        },
+        NoProfileHelp = Strings.T("Without a profile: your settings under Background and Color mode, as they are",
+            "Ohne Profil: deine Einstellungen unter Hintergrund und Farbmodus, wie sie sind"),
+        // What a profile changes in DynaTones lives in config.json, by the profile's id.
+        Moved = MoveProfileSettings,
+        Removed = id => Change(c => c.Profiles.Remove(id)),
+        Editing = profile =>
+        {
+            editedProfile = profile;
+            ShowProfileColor();
+        },
+        EditorPart = _ => new TextBlock
+        {
+            Style = S("Muted"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 12, 0, 0),
+            Text = Strings.T("What the profile changes in DynaTones you set on the Profiles page after saving.",
+                "Was das Profil in DynaTones ändert, stellst du nach dem Speichern auf der Seite Profile ein."),
+        },
+        Confirm = (title, body, action, danger) => dialog.ConfirmAsync(title, body, action, danger: danger),
+        Choose = (title, body, second, main) => dialog.ChooseAsync(title, body, second, main),
+    };
+
+    void BuildProfilesPage() => BuildProfilesPage(refreshBar: true);
+
+    void BuildProfilesPage(bool refreshBar)
     {
         if (ProfilesPanel == null) return;
-        // Changed here, in another app of the family, or the profile that applies changed: shown anew, but never
-        // while the editor is open.
+        // Changed here, in another app of the family, or the profile that applies changed: shown anew. While a page of
+        // the tab is open (the editor, the pause, the order) the tab below is built anew behind it.
         if (!profilesFollow)
         {
             profilesFollow = true;
-            void Again()
-            {
-                if (!editingProfile && ProfilesView.Visibility == Visibility.Visible) Dispatcher.BeginInvoke(BuildProfilesPage);
-            }
+            void Again() => Dispatcher.BeginInvoke(() => BuildProfilesPage());
             // After a resolve only when another profile applies now: resolves come every minute.
             void ActiveChanged()
             {
@@ -42,99 +83,62 @@ public partial class MainWindow
             }
             FamilyProfiles.Changed += Again;
             Engine.Updated += ActiveChanged;
+            // A page of the tab opened or closed: the header's main button gives way to the page's Save.
+            var content = DependencyPropertyDescriptor.FromProperty(ContentControl.ContentProperty, typeof(ScrollViewer));
+            EventHandler pageChanged = (_, _) => UpdateAddButton();
+            content.AddValueChanged(ProfilesView, pageChanged);
             Closed += (_, _) =>
             {
                 FamilyProfiles.Changed -= Again;
                 Engine.Updated -= ActiveChanged;
+                content.RemoveValueChanged(ProfilesView, pageChanged);
             };
-        }
-        ProfilesPanel.Children.Clear();
-        if (editingProfile)
-        {
-            BuildProfileEditor();
-            return;
         }
         var all = Profiles.All;
         var active = Engine.ActiveProfile;
         profilesShownActive = active?.Id;
-        if (shownProfile == null || all.All(p => p.Id != shownProfile)) shownProfile = active?.Id ?? all.FirstOrDefault()?.Id;
+        if (!profileChosen || (shownProfile is { } chosen && all.All(p => p.Id != chosen))) shownProfile = active?.Id;
 
-        // ---------- The profiles as chips ----------
-        var bar = new Grid { Margin = new Thickness(0, 0, 0, 14) };
-        bar.ColumnDefinitions.Add(new ColumnDefinition());
-        bar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var chips = new WrapPanel { VerticalAlignment = VerticalAlignment.Center };
-        foreach (var profile in all)
+        // ---------- The kit's bar: built once, so the keyboard focus stays on a chip ----------
+        if (profileBar == null)
         {
-            var color = FamilyProfiles.ColorOf(FamilyProfiles.Current.Profiles, profile);
-            var chip = new RadioButton { Style = S("ProfileChip"), GroupName = "profiles", IsChecked = profile.Id == shownProfile, Margin = new Thickness(0, 0, 6, 6),
-                Content = Ui.Horizontal(new Border { Width = 10, Height = 10, CornerRadius = new CornerRadius(5), Background = Hex(color.Mid), Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center },
-                    new TextBlock { Text = profile.Name, VerticalAlignment = VerticalAlignment.Center }) };
-            var id = profile.Id;
-            chip.Checked += (_, _) =>
-            {
-                if (shownProfile == id) return;
-                shownProfile = id;
-                Dispatcher.BeginInvoke(BuildProfilesPage);
-            };
-            Speak(chip, profile.Name);
-            chips.Children.Add(chip);
+            profileBar = KitProfiles.Bar(ProfileHost);
+            profileBar.Margin = new Thickness(0, 0, 0, 16);
+            ProfilesPanel.Children.Add(profileBar);
+            ProfilesPanel.Children.Add(profileBody);
         }
-        // The one text action of this place (GhostButton), as the design system's table names it: Add profile.
-        var add = new Button { Style = S("GhostButton"), Margin = new Thickness(4, 0, 6, 6), Content = Ui.Horizontal(
-            new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", FontSize = 14, VerticalAlignment = VerticalAlignment.Center },
-            new TextBlock { Text = Strings.T("Add profile", "Profil hinzufügen"), Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center }) };
-        KitMenuButton.Attach(add, FillProfileAddMenu);
-        Speak(add, Strings.T("Add profile", "Profil hinzufügen"));
-        chips.Children.Add(add);
-        bar.Children.Add(chips);
-        var now = new TextBlock { Style = S("Muted"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 6),
-            Text = active == null ? Strings.T("No profile applies now", "Gerade gilt kein Profil")
-                : FamilyProfiles.ManualFor(Profiles.App, DateTime.Now) != null ? Strings.T($"Active now: {active.Name}, chosen by hand", $"Jetzt aktiv: {active.Name}, von Hand gewählt")
-                : Strings.T($"Active now: {active.Name}, by schedule", $"Jetzt aktiv: {active.Name}, nach Zeitplan") };
-        Grid.SetColumn(now, 1);
-        bar.Children.Add(now);
-        ProfilesPanel.Children.Add(bar);
+        else if (refreshBar) profileBar.Refresh();
 
+        profileBody.Children.Clear();
         if (all.Count == 0)
         {
-            var empty = Ui.Card(ProfilesPanel, Strings.T("Profiles", "Profile"));
+            var empty = Ui.Card(profileBody, Strings.T("Profiles", "Profile"));
             Ui.Note(empty, Strings.T(
                 "A profile changes some of DynaTones' settings at certain times or when you choose it: its own package, transition, lock screen, color mode or pointer. Everything else stays as set under Background and Color mode. A profile can be shared with the other EsteemWorks apps, so one schedule switches them all.",
                 "Ein Profil ändert zu bestimmten Zeiten oder wenn du es wählst einige Einstellungen von DynaTones: eigenes Paket, Übergang, Sperrbildschirm, Farbmodus oder Mauszeiger. Alles andere bleibt, wie unter Hintergrund und Farbmodus eingestellt. Ein Profil lässt sich mit den anderen EsteemWorks-Apps teilen, dann schaltet ein Zeitplan alle um."));
-            var first = Ui.Button(Strings.T("New profile", "Neues Profil"), (_, _) => { });
-            KitMenuButton.Attach(first, FillProfileAddMenu);
-            first.HorizontalAlignment = HorizontalAlignment.Left;
-            first.Margin = new Thickness(0, 12, 0, 8);
-            empty.Children.Add(first);
             return;
         }
-        if (all.FirstOrDefault(p => p.Id == shownProfile) is not { } shown) return;
+        if (all.FirstOrDefault(p => p.Id == shownProfile) is { } shown) BuildProfileSettings(shown);
 
-        // ---------- The chosen profile ----------
+        // ---------- The week, the kit's ----------
+        var week = Ui.Card(profileBody, ProfileTexts.Week);
+        week.Children.Add(new ProfileWeek(all) { Margin = new Thickness(0, 8, 0, 8) });
+        var legend = ProfileWeek.Legend(all, Strings.T("No profile: your settings as they are", "Ohne Profil: deine Einstellungen, wie sie sind"));
+        legend.Margin = new Thickness(0, 0, 0, 8);
+        week.Children.Add(legend);
+    }
+
+    /// <summary>DynaTones' own part: what the profile chosen in the bar changes in DynaTones.</summary>
+    void BuildProfileSettings(FamilyProfile shown)
+    {
         var card = new StackPanel();
-        ProfilesPanel.Children.Add(new Border { Style = S("Card"), Child = card, Padding = new Thickness(24, 20, 24, 20), Margin = new Thickness(0, 0, 0, 16) });
-        var head = new Grid { Margin = new Thickness(0, 0, 0, 14) };
-        head.ColumnDefinitions.Add(new ColumnDefinition());
-        head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var title = new StackPanel();
-        title.Children.Add(new TextBlock { Style = S("CardTitle"), Text = shown.Name });
-        var when = Ui.Horizontal(new TextBlock { Style = S("Muted"), Text = FamilyProfiles.Describe(all, shown, DateTime.Now), VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap });
-        var change = Ui.Button(Strings.T("Change", "Ändern"), (_, _) => EditProfile(shown.Id), "GhostButton")
-            .Tip(Strings.T("Name, color, days and hours, for every app that uses the profile.", "Name, Farbe, Tage und Uhrzeiten, für alle Apps, die das Profil nutzen."));
-        change.Margin = new Thickness(6, 0, 0, 0);
-        when.Children.Add(change);
-        title.Children.Add(when);
-        head.Children.Add(title);
-        var manual = FamilyProfiles.ManualFor(Profiles.App, DateTime.Now);
-        var switchButton = manual?.Profile == shown.Id
-            ? Ui.Button(Strings.T("Back to the schedule", "Zurück zum Zeitplan"), (_, _) => FamilyProfiles.ClearManual())
-            : Ui.Button(Strings.T("Use now", "Jetzt verwenden"), (_, _) => FamilyProfiles.SetManual(shown.Id, null))
-                .Tip(Strings.T("Applies this profile until you switch back, in every app that uses it.", "Verwendet dieses Profil, bis du zurückschaltest, in allen Apps, die es nutzen."));
-        switchButton.VerticalAlignment = VerticalAlignment.Top;
-        Grid.SetColumn(switchButton, 1);
-        head.Children.Add(switchButton);
-        card.Children.Add(head);
+        profileBody.Children.Add(new Border { Style = S("Card"), Child = card, Padding = new Thickness(24, 20, 24, 20), Margin = new Thickness(0, 0, 0, 16) });
+        card.Children.Add(new TextBlock { Style = S("CardTitle"), Text = Strings.T($"What \"{shown.Name}\" changes in DynaTones", $"Was „{shown.Name}“ in DynaTones ändert"), TextWrapping = TextWrapping.Wrap });
+        card.Children.Add(new TextBlock { Style = S("Muted"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 14),
+            Text = FamilyProfiles.SharedWith(shown, Profiles.App) is { Count: > 0 } others
+                ? Strings.T($"Name, color and times apply in {ProfileSharing.AppsShort(others)} too; what follows only here.",
+                    $"Name, Farbe und Zeiten gelten auch in {ProfileSharing.AppsShort(others)}; was folgt, nur hier.")
+                : Strings.T("A choice here applies only in this profile.", "Eine Auswahl hier gilt nur in diesem Profil.") });
 
         var settings = Engine.Settings;
         var own = settings.Profiles.GetValueOrDefault(shown.Id) ?? new ProfileSettings();
@@ -192,35 +196,6 @@ public partial class MainWindow
         Speak(day, Strings.T("Pointer by day", "Mauszeiger am Tag"));
         Speak(night, Strings.T("Pointer by night", "Mauszeiger in der Nacht"));
         grid.Children.Add(ProfileSetting(Strings.T("Mouse pointer", "Mauszeiger"), own.Pointer != null, () => Set(p => p.Pointer = null), Ui.Horizontal(day, Ui.Spacer(6), night)));
-
-        var share = new CheckBox { IsChecked = shown.Shared, Margin = new Thickness(0, 16, 0, 0),
-            Content = Ui.Horizontal(new TextBlock { Text = Strings.T("Offer to all EsteemWorks apps", "Für alle EsteemWorks-Apps bereitstellen") }, new TextBlock { Style = S("InfoGlyph") }) };
-        share.ToolTip = Strings.T("Other EsteemWorks apps can choose this profile when they add one and attach their own settings to it. Name and schedule are then the same everywhere.",
-            "Andere EsteemWorks-Apps können dieses Profil beim Anlegen auswählen und ihre eigenen Einstellungen daran hängen. Name und Zeitplan gelten dann überall gleich.");
-        // The content is two parts (words and the info sign): the switch needs its name for screen readers itself.
-        Speak(share, Strings.T("Offer to all EsteemWorks apps", "Für alle EsteemWorks-Apps bereitstellen"));
-        share.Click += async (_, _) =>
-        {
-            if (!await SetSharedAsync(shown.Id, share.IsChecked == true)) share.IsChecked = !(share.IsChecked == true);
-        };
-        card.Children.Add(share);
-        if (FamilyProfiles.SharedWith(shown, Profiles.App) is { Count: > 0 } others)
-            card.Children.Add(new TextBlock { Style = S("Muted"), Margin = new Thickness(0, 6, 0, 0),
-                Text = Strings.T($"Also used by {string.Join(", ", others)}.", $"Auch genutzt von {string.Join(", ", others)}.") });
-
-        // ---------- The week ----------
-        var week = Ui.Card(ProfilesPanel, Strings.T("The week", "Die Woche"));
-        week.Children.Add(new WeekView(all) { Margin = new Thickness(0, 8, 0, 8) });
-        var legend = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
-        foreach (var profile in all)
-        {
-            var color = FamilyProfiles.ColorOf(FamilyProfiles.Current.Profiles, profile);
-            legend.Children.Add(Ui.Horizontal(new Border { Width = 12, Height = 12, CornerRadius = new CornerRadius(3), Background = Hex(color.Mid), Margin = new Thickness(0, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center },
-                new TextBlock { Style = S("Muted"), Text = profile.Name, Margin = new Thickness(0, 0, 16, 0), VerticalAlignment = VerticalAlignment.Center }));
-        }
-        legend.Children.Add(Ui.Horizontal(new Border { Width = 12, Height = 12, CornerRadius = new CornerRadius(3), Background = B("Surface2"), BorderBrush = B("Line"), BorderThickness = new Thickness(1), Margin = new Thickness(0, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center },
-            new TextBlock { Style = S("Muted"), Text = Strings.T("No profile: your settings as they are", "Kein Profil: deine Einstellungen, wie sie sind"), VerticalAlignment = VerticalAlignment.Center }));
-        week.Children.Add(legend);
     }
 
     /// <summary>
@@ -262,212 +237,6 @@ public partial class MainWindow
         return stack;
     }
 
-    void FillProfileAddMenu(ContextMenu menu)
-    {
-        var items = new List<(string, string, Action)> { ("", Strings.T("Create a new profile", "Neues Profil anlegen"), () => EditProfile(null)) };
-        foreach (var offered in FamilyProfiles.Offered(Profiles.App))
-        {
-            var from = string.Join(", ", offered.Apps);
-            items.Add(("", Strings.T($"Take over \"{offered.Name}\" from {from}", $"„{offered.Name}“ aus {from} übernehmen"), () => TakeOverProfile(offered.Id)));
-        }
-        FillMenu(menu, items.ToArray());
-    }
-
-    void TakeOverProfile(Guid id)
-    {
-        FamilyProfiles.TakeOver(id, Profiles.App);
-        shownProfile = id;
-        Log.Info("Took over a profile another app offered");
-        BuildProfilesPage();
-    }
-
-    void EditProfile(Guid? id)
-    {
-        editingProfile = true;
-        newProfile = id == null;
-        if (id != null) shownProfile = id;
-        ShowProfileColor();
-        BuildProfilesPage();
-        UpdateAddButton();
-        ProfilesView?.ScrollToHome();
-    }
-
-    /// <summary>Name, color, days, hours and sharing: the family's shared fields, with Save, as in StartQueue.</summary>
-    void BuildProfileEditor()
-    {
-        var head = Ui.Horizontal();
-        var back = new Button { Style = S("SecondaryButton"), Content = Ui.Horizontal(
-            new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", FontSize = 12, VerticalAlignment = VerticalAlignment.Center },
-            new TextBlock { Text = Strings.T("Back", "Zurück"), Margin = new Thickness(8, 0, 0, 0) }) };
-        back.Click += (_, _) => CloseProfileEditor();
-        Speak(back, Strings.T("Back", "Zurück"));
-        head.Children.Add(back);
-        head.Children.Add(new TextBlock { Style = S("H2"), Text = newProfile ? Strings.T("New profile", "Neues Profil") : Strings.T("Change profile", "Profil ändern"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 0, 0) });
-        head.Margin = new Thickness(0, 0, 0, 14);
-        ProfilesPanel.Children.Add(head);
-
-        var card = new StackPanel();
-        ProfilesPanel.Children.Add(new Border { Style = S("Card"), Child = card, Padding = new Thickness(24, 20, 24, 20) });
-        if (profileFields.Parent is Panel old) old.Children.Remove(profileFields);
-        var editing = newProfile ? null : FamilyProfiles.Find(shownProfile ?? Guid.Empty);
-        profileFields.Load(editing, Profiles.All);
-        card.Children.Add(profileFields);
-        profileFields.AppPart.Children.Clear();
-        profileFields.AppPart.Children.Add(new TextBlock { Style = S("Muted"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 12, 0, 0),
-            Text = Strings.T("What the profile changes in DynaTones is set on the Profiles page after saving.", "Was das Profil in DynaTones ändert, stellst du nach dem Speichern auf der Seite Profile ein.") });
-
-        var buttons = new Grid { Margin = new Thickness(0, 20, 0, 0) };
-        if (editing != null)
-        {
-            // "Remove from DynaTones" while other apps use it, "Delete profile" only when it is gone afterwards (kit
-            // ProfileSharing); the other apps are named from the profile, never written in here.
-            var othersUse = FamilyProfiles.UsedByOthers(editing, Profiles.App);
-            var delete = Ui.Button(ProfileSharing.RemoveLabel(Profiles.App, othersUse), async (_, _) =>
-            {
-                var others = FamilyProfiles.SharedWith(editing, Profiles.App);
-                var ok = await dialog.ConfirmAsync(others.Count > 0
-                        ? Strings.T($"Remove \"{editing.Name}\" from DynaTones?", $"„{editing.Name}“ aus DynaTones entfernen?")
-                        : Strings.T($"Delete \"{editing.Name}\"?", $"„{editing.Name}“ löschen?"),
-                    others.Count > 0
-                        ? Strings.T($"DynaTones stops using it; {ProfileSharing.Apps(others)} keeps it.", $"DynaTones nutzt es nicht mehr; {ProfileSharing.Apps(others)} behält es.")
-                        : Strings.T("The profile and what it changes in DynaTones are gone.", "Das Profil und was es in DynaTones ändert, sind weg."),
-                    ProfileSharing.RemoveLabel(Profiles.App, others.Count > 0), danger: true);
-                if (!ok) return;
-                if (others.Count > 0) FamilyProfiles.Leave(editing.Id, Profiles.App);
-                else FamilyProfiles.Delete(editing.Id);
-                Change(c => c.Profiles.Remove(editing.Id));
-                shownProfile = null;
-                CloseProfileEditor();
-            }, "QuietButton");
-            delete.HorizontalAlignment = HorizontalAlignment.Left;
-            buttons.Children.Add(delete);
-        }
-        var right = Ui.Horizontal(Ui.Button(Strings.T("Cancel", "Abbrechen"), (_, _) => CloseProfileEditor()), Ui.Spacer(),
-            Ui.Button(Strings.T("Save", "Speichern"), (_, _) => SaveProfile(), "PrimaryButton"));
-        right.HorizontalAlignment = HorizontalAlignment.Right;
-        buttons.Children.Add(right);
-        card.Children.Add(buttons);
-        Dispatcher.BeginInvoke(profileFields.FocusName);
-    }
-
-    async void SaveProfile()
-    {
-        if (profileFields.Read() is not { } profile) return;
-        var app = Profiles.App;
-        var before = newProfile ? null : FamilyProfiles.Find(profile.Id);
-
-        // "For all EsteemWorks apps" off while other apps use it: after asking, DynaTones gets a copy of its own and the
-        // others keep theirs; what the profile changes in DynaTones moves to the copy (kit STANDARD, "Family profiles").
-        if (before is { Shared: true } && !profile.Shared && FamilyProfiles.UsedByOthers(before, app))
-        {
-            if (!await ConfirmDetachAsync(before)) return;
-            profile.Id = DetachProfile(before.Id);
-            FamilyProfiles.Save(profile);
-            shownProfile = profile.Id;
-            CloseProfileEditor();
-            return;
-        }
-
-        // On, while another app offers a profile of the same name: join it instead of making another one.
-        var newlyShared = profile.Shared && (newProfile ? profileFields.TakesOver == null : before is not { Shared: true } || !FamilyProfiles.SameName(before.Name, profile.Name));
-        if (newlyShared && FamilyProfiles.SharedNamed(profile.Name, app, except: profile.Id) is { } offered)
-        {
-            var choice = await ChooseRejoinAsync(profile, offered);
-            if (choice == KitDialog.Cancelled)
-            {
-                profileFields.SetShared(false);
-                profileFields.ShowHint(ProfileSharing.NotSharedHint);
-                return;
-            }
-            // A new one is saved first, then gives way to the offered one.
-            if (newProfile) FamilyProfiles.Add(profile, app);
-            else FamilyProfiles.Save(profile);
-            RejoinProfile(profile.Id, offered.Id, overwrite: choice == KitDialog.Second);
-            shownProfile = offered.Id;
-            CloseProfileEditor();
-            return;
-        }
-
-        if (newProfile)
-        {
-            if (profileFields.TakesOver is { } id)
-            {
-                FamilyProfiles.TakeOver(id, Profiles.App);
-                FamilyProfiles.Save(profile);
-            }
-            else FamilyProfiles.Add(profile, Profiles.App);
-            Log.Info($"Added profile \"{profile.Name}\"");
-        }
-        else FamilyProfiles.Save(profile);
-        shownProfile = profile.Id;
-        CloseProfileEditor();
-    }
-
-    /// <summary>
-    /// The switch "Offer to all EsteemWorks apps" on the Profiles page, by the same rules as in the editor. False when
-    /// nothing changed (cancelled), so the switch goes back.
-    /// </summary>
-    async Task<bool> SetSharedAsync(Guid id, bool on)
-    {
-        var app = Profiles.App;
-        if (FamilyProfiles.Find(id) is not { } current) return false;
-        if (!on && current.Shared && FamilyProfiles.UsedByOthers(current, app))
-        {
-            if (!await ConfirmDetachAsync(current)) return false;
-            shownProfile = DetachProfile(id);
-            _ = Dispatcher.BeginInvoke(BuildProfilesPage);
-            return true;
-        }
-        if (on && FamilyProfiles.SharedNamed(current.Name, app, except: id) is { } offered)
-        {
-            var choice = await ChooseRejoinAsync(current, offered);
-            if (choice == KitDialog.Cancelled)
-            {
-                dialog.Notices.Show(ProfileSharing.NotSharedHint);
-                return false;
-            }
-            RejoinProfile(id, offered.Id, overwrite: choice == KitDialog.Second);
-            shownProfile = offered.Id;
-            _ = Dispatcher.BeginInvoke(BuildProfilesPage);
-            return true;
-        }
-        FamilyProfiles.Change(id, p => p.Shared = on);
-        return true;
-    }
-
-    Task<bool> ConfirmDetachAsync(FamilyProfile profile) =>
-        dialog.ConfirmAsync(ProfileSharing.DetachTitle(profile.Name),
-            ProfileSharing.DetachBody(profile.Name, Profiles.App, FamilyProfiles.SharedWith(profile, Profiles.App)), ProfileSharing.Detach);
-
-    /// <summary>
-    /// Same rules: joins without asking, so switching on and off never makes another profile. A profile other apps use
-    /// too cannot simply give way to another (it needs another name). Otherwise the kit's question with its words.
-    /// </summary>
-    async Task<int> ChooseRejoinAsync(FamilyProfile own, FamilyProfile offered)
-    {
-        if (FamilyProfiles.Find(own.Id) is { } saved && FamilyProfiles.UsedByOthers(saved, Profiles.App)) return KitDialog.Cancelled;
-        if (FamilyProfiles.SameRules(own, offered)) return KitDialog.Main;
-        return await dialog.ChooseAsync(ProfileSharing.ClashTitle(offered.Name), ProfileSharing.ClashBody(own, offered, Profiles.App),
-            ProfileSharing.Overwrite, ProfileSharing.TakeExisting);
-    }
-
-    /// <summary>DynaTones' own copy of a shared profile; what the profile changes in DynaTones moves with it.</summary>
-    Guid DetachProfile(Guid id)
-    {
-        var own = FamilyProfiles.Detach(id, Profiles.App);
-        MoveProfileSettings(id, own);
-        Log.Info("Stopped sharing a profile, DynaTones keeps a copy of its own");
-        return own;
-    }
-
-    /// <summary>Joins the offered profile of the same name; the own one is gone, its DynaTones settings move along.</summary>
-    void RejoinProfile(Guid own, Guid shared, bool overwrite)
-    {
-        FamilyProfiles.Rejoin(own, shared, Profiles.App, overwrite);
-        MoveProfileSettings(own, shared);
-        Log.Info(overwrite ? "Shared a profile again, its rules now apply to the existing one" : "Shared a profile again with the existing one");
-    }
-
     /// <summary>Package, transition, lock screen, color mode and pointer of a profile, from one id to another.</summary>
     void MoveProfileSettings(Guid from, Guid to)
     {
@@ -479,21 +248,33 @@ public partial class MainWindow
         });
     }
 
-    /// <summary>For the snapshot: the editor for a new profile, then back.</summary>
-    internal void ShowProfileEditorForSnapshot(bool open)
+    /// <summary>A page of the Profiles tab is open (the kit's editor, pause or order).</summary>
+    bool ProfilePageOpen => ProfilesView.Visibility == Visibility.Visible && KitSubpage.Depth(ProfilesView) > 0;
+
+    /// <summary>For the snapshot: a page of the Profiles tab ("editor" for a new profile, "pause", "order"), or back.</summary>
+    internal void ShowProfilePageForSnapshot(string? page)
     {
         TabProfiles.IsChecked = true;
         ShowPage();
-        if (open) EditProfile(null);
-        else CloseProfileEditor();
-    }
-
-    void CloseProfileEditor()
-    {
-        editingProfile = false;
-        ShowProfileColor();
-        BuildProfilesPage();
-        UpdateAddButton();
+        if (page == null)
+        {
+            while (KitSubpage.Depth(ProfilesView) > 0) KitSubpage.Back(ProfilesView, focus: false);
+            return;
+        }
+        var first = Profiles.All.FirstOrDefault();
+        if (profileBar == null) return;
+        switch (page)
+        {
+            case "editor":
+                KitProfiles.OpenEditor(profileBar, ProfileHost, null);
+                break;
+            case "pause" when first != null:
+                KitProfiles.OpenPause(profileBar, ProfileHost, first.Id);
+                break;
+            case "order":
+                KitProfiles.OpenOrder(profileBar, ProfileHost);
+                break;
+        }
     }
 
     /// <summary>A note on the pages under Background and Color mode while a profile changes what they set.</summary>
@@ -502,65 +283,5 @@ public partial class MainWindow
         if (Engine.ActiveProfile is not { } active || !Engine.Settings.Profiles.TryGetValue(active.Id, out var p) || p.IsEmpty) return null;
         return Warning(Strings.T($"The profile \"{active.Name}\" applies now and changes some of what is set here. Here you set what applies without a profile.",
             $"Gerade gilt das Profil „{active.Name}“ und ändert einiges von dem, was hier eingestellt ist. Hier stellst du ein, was ohne Profil gilt."));
-    }
-}
-
-/// <summary>The week as seven rows from 0 to 24, colored by the profile that applies, gray where none does.</summary>
-sealed class WeekView : FrameworkElement
-{
-    readonly IReadOnlyList<FamilyProfile> profiles;
-    const double LabelWidth = 36, RowHeight = 20, Gap = 6, Axis = 20;
-
-    public WeekView(IReadOnlyList<FamilyProfile> profiles)
-    {
-        this.profiles = profiles;
-        Height = 7 * (RowHeight + Gap) + Axis;
-        Theme.Changed += InvalidateVisual;
-        Unloaded += (_, _) => Theme.Changed -= InvalidateVisual;
-    }
-
-    protected override void OnRender(DrawingContext dc)
-    {
-        var width = ActualWidth - LabelWidth;
-        if (width <= 0) return;
-        var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-        var muted = Theme.Brush("Text3");
-        var none = Theme.Brush("Surface2");
-        // A Monday in the coming week as the reference, so pauses that are over do not show.
-        var monday = DateTime.Today.AddDays(((int)DayOfWeek.Monday - (int)DateTime.Today.DayOfWeek + 7) % 7);
-        var row = 0;
-        foreach (var day in FamilyProfiles.WeekFromMonday)
-        {
-            var date = monday.AddDays(((int)day - (int)DayOfWeek.Monday + 7) % 7);
-            var top = row * (RowHeight + Gap);
-            var label = new FormattedText(FamilyProfiles.DayShort(day), Strings.Culture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 12, muted, dpi);
-            dc.DrawText(label, new Point(0, top + (RowHeight - label.Height) / 2));
-            dc.PushClip(new RectangleGeometry(new Rect(LabelWidth, top, width, RowHeight), 4, 4));
-            dc.DrawRectangle(none, null, new Rect(LabelWidth, top, width, RowHeight));
-            // Runs of the same profile as one block each, so no seams show between the quarters of an hour.
-            FamilyProfile? run = null;
-            var runStart = 0;
-            for (var slot = 0; slot <= 96; slot++)
-            {
-                var profile = slot < 96 ? FamilyProfiles.Scheduled(profiles, date.AddMinutes(slot * 15 + 7)) : null;
-                if (slot < 96 && profile?.Id == run?.Id) continue;
-                if (run != null)
-                {
-                    var color = FamilyProfiles.ColorOf(FamilyProfiles.Current.Profiles, run);
-                    var brush = (SolidColorBrush)new BrushConverter().ConvertFromString(color.Mid)!;
-                    dc.DrawRectangle(brush, null, new Rect(LabelWidth + runStart * width / 96, top, (slot - runStart) * width / 96, RowHeight));
-                }
-                run = profile;
-                runStart = slot;
-            }
-            dc.Pop();
-            row++;
-        }
-        foreach (var h in new[] { 0, 6, 12, 18, 24 })
-        {
-            var text = new FormattedText($"{h:00}:00", Strings.Culture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 11, muted, dpi);
-            var x = LabelWidth + h * width / 24;
-            dc.DrawText(text, new Point(Math.Clamp(x - text.Width / 2, LabelWidth, ActualWidth - text.Width), 7 * (RowHeight + Gap) + 2));
-        }
     }
 }

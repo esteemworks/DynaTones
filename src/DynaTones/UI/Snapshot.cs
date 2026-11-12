@@ -158,12 +158,15 @@ static class Snapshot
                     Save(window, Path.Combine(folder, $"gallery-end-{suffix}.png"));
                     galleryScroller.ScrollToHome();
                 }
-                // The profile editor, as "New profile".
-                window.ShowProfileEditorForSnapshot(true);
-                await Task.Delay(500);
-                window.UpdateLayout();
-                Save(window, Path.Combine(folder, $"profile-edit-{suffix}.png"));
-                window.ShowProfileEditorForSnapshot(false);
+                // The pages of the Profiles tab, the kit's: the editor as "New profile", the pause and the order.
+                foreach (var profilePage in new[] { "editor", "pause", "order" })
+                {
+                    window.ShowProfilePageForSnapshot(profilePage);
+                    await Task.Delay(500);
+                    window.UpdateLayout();
+                    Save(window, Path.Combine(folder, $"profile-{profilePage}-{suffix}.png"));
+                    window.ShowProfilePageForSnapshot(null);
+                }
                 // The in-window question and the Undo bar.
                 window.ShowSampleDialog(true);
                 await Task.Delay(400);
