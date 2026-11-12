@@ -375,7 +375,7 @@ public partial class MainWindow
             if (choice == KitDialog.Cancelled)
             {
                 profileFields.SetShared(false);
-                profileFields.ShowHint(ProfileSharing.NotSharedHint(offered.Name));
+                profileFields.ShowHint(ProfileSharing.NotSharedHint);
                 return;
             }
             // A new one is saved first, then gives way to the offered one.
@@ -422,7 +422,7 @@ public partial class MainWindow
             var choice = await ChooseRejoinAsync(current, offered);
             if (choice == KitDialog.Cancelled)
             {
-                dialog.Notices.Show(ProfileSharing.NotSharedHint(offered.Name));
+                dialog.Notices.Show(ProfileSharing.NotSharedHint);
                 return false;
             }
             RejoinProfile(id, offered.Id, overwrite: choice == KitDialog.Second);
@@ -446,7 +446,7 @@ public partial class MainWindow
     {
         if (FamilyProfiles.Find(own.Id) is { } saved && FamilyProfiles.UsedByOthers(saved, Profiles.App)) return KitDialog.Cancelled;
         if (FamilyProfiles.SameRules(own, offered)) return KitDialog.Main;
-        return await dialog.ChooseAsync(ProfileSharing.ClashTitle(offered.Name, offered.Apps), ProfileSharing.ClashBody(own, offered, Profiles.App),
+        return await dialog.ChooseAsync(ProfileSharing.ClashTitle(offered.Name), ProfileSharing.ClashBody(own, offered, Profiles.App),
             ProfileSharing.Overwrite, ProfileSharing.TakeExisting);
     }
 
