@@ -26,7 +26,9 @@ All notable changes to DynaTones. Downloads will be on the [releases page](../..
   same days and times without asking, otherwise DynaTones asks whether to use the existing profile or overwrite it,
   and shows both versions. Switching back and forth never makes a new profile. The remove button says "Remove from
   DynaTones" while other apps use the profile and "Delete profile" only when it is gone afterwards
-- Screen readers: the switch "Offer to all EsteemWorks apps" has its name
+- Screen readers: the switch "Offer to all EsteemWorks apps" has its name, and every row in the settings is read
+  with its name and the line below it, also rows without a control
+- The arrow of a choice field in the settings stays the same after Windows switches between light and dark
 - **A new tray menu, as the family's:** a head with DynaTones' tile, its name and what holds now ("Light mode, next
   change at 14:50"), a click on it opens the window; then the day's actions with icons (Update now, Next image,
   Switch to dark, Jump to the next dark phase), Pause with its state at the right ("Running", "until 15:00"), and Quit.
