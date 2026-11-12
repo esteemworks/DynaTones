@@ -4,6 +4,13 @@ All notable changes to DynaTones. Downloads will be on the [releases page](../..
 
 ## Not released yet
 
+- **Large choices as in every EsteemWorks app.** The transition, the lock screen, when a picture begins and the
+  pictures of the introduction are the family's choice cards: one Tab stop, the arrow keys choose, and the keyboard
+  focus stays on the chosen card. Each card says in a second line what it means. What belongs to the chosen card
+  (the minutes of a flowing transition, the lock screen's package, the way to Windows' own setting, the sun's height
+  or the clock time) is a row under the cards with stops of its own. The introduction's headings, features, facts and
+  notes are the family's pieces; looking around first is kept when DynaTones starts again. Scrolling with the middle
+  mouse button shows the family's marker
 - **Check, as in every EsteemWorks app.** The small refresh icon in the header is now the family's Check button
   with its name. It reads the settings and the location again and puts everything right for this moment, as before;
   F5 does the same. Afterwards a notification says what changed (the desktop or lock screen picture, light or dark,

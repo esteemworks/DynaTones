@@ -60,18 +60,6 @@
 
         </kit:KitFrame>
 
-        <!-- Starting point of scrolling with the middle mouse button (MiddleScroll) -->
-        <Canvas IsHitTestVisible="False">
-            <Grid x:Name="ScrollMarker" Width="28" Height="28" Visibility="Collapsed">
-                <Ellipse Fill="{DynamicResource Pop}" Stroke="{DynamicResource ControlLine}" StrokeThickness="1" />
-                <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE70E;" FontSize="8" Foreground="{DynamicResource Text2}"
-                           HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,5,0,0" />
-                <Ellipse Width="3" Height="3" Fill="{DynamicResource Text2}" />
-                <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE70D;" FontSize="8" Foreground="{DynamicResource Text2}"
-                           HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,5" />
-            </Grid>
-        </Canvas>
-
         <!-- Questions, messages and the Undo bar (KitDialog) -->
         <Grid x:Name="DialogLayer" />
     </Grid>

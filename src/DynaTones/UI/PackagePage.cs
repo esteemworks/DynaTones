@@ -56,7 +56,7 @@ public partial class MainWindow
             e.Handled = true;
             SaveName();
         };
-        Speak(name, Strings.T("Name", "Name"));
+        Ui.Speak(name, Strings.T("Name", "Name"));
         left.Children.Add(name);
 
         left.Children.Add(Label(Strings.T("Description", "Beschreibung")));
@@ -70,7 +70,7 @@ public partial class MainWindow
             else p.Description = text.Length == 0 ? null : text;
             Packages.Save(p);
         };
-        Speak(description, Strings.T("Description", "Beschreibung"));
+        Ui.Speak(description, Strings.T("Description", "Beschreibung"));
         left.Children.Add(description);
 
         // Its own transition, or the one set for the desktop.
@@ -90,7 +90,7 @@ public partial class MainWindow
             p.Transition = v is { } code ? Transitions.FromCode(code) : null;
             SavePackage(p);
         }, 200));
-        Speak(transition, Strings.T("Transition in this package", "Übergang in diesem Paket"));
+        Ui.Speak(transition, Strings.T("Transition in this package", "Übergang in diesem Paket"));
         left.Children.Add(transition);
 
         // More details: the other language, where the pictures come from, made with AI.
@@ -109,7 +109,7 @@ public partial class MainWindow
                 set(text.Length == 0 ? null : text);
                 Packages.Save(p);
             };
-            Speak(box, label);
+            Ui.Speak(box, label);
             more.Children.Add(box);
             return box;
         }
@@ -213,7 +213,7 @@ public partial class MainWindow
             Content = stack,
             AllowDrop = true,
         };
-        Speak(button, PictureName(image));
+        Ui.Speak(button, PictureName(image));
         button.ToolTip = Strings.T("Click: when it begins. Drag: another place in the order. Del: remove.", "Klick: wann es beginnt. Ziehen: andere Stelle in der Reihenfolge. Entf: entfernen.");
         button.Click += (_, _) => OpenPage(BgPage.Image, p.Id, index);
         button.KeyDown += (_, e) =>
@@ -263,7 +263,7 @@ public partial class MainWindow
         stack.Children.Add(new TextBlock { Style = S("RowLabel"), Text = Strings.T("Add pictures", "Bilder hinzufügen"), Margin = new Thickness(0, 8, 0, 0), HorizontalAlignment = HorizontalAlignment.Center });
         var button = new Button { Style = S("SecondaryButton"), Height = double.NaN, Margin = new Thickness(4, 4, 4, 8), VerticalAlignment = VerticalAlignment.Stretch, Content = stack };
         button.ToolTip = Strings.T("Adds JPEG or PNG pictures; Auto places them in the day.", "Fügt JPEG- oder PNG-Bilder hinzu; Auto verteilt sie über den Tag.");
-        Speak(button, Strings.T("Add pictures", "Bilder hinzufügen"));
+        Ui.Speak(button, Strings.T("Add pictures", "Bilder hinzufügen"));
         button.Click += async (_, _) =>
         {
             var dialog = new Microsoft.Win32.OpenFileDialog

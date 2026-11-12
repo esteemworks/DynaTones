@@ -67,7 +67,7 @@ public partial class MainWindow
         var toggle = Locked(Ui.Toggle(a.Enabled, on => ChangeAndRebuild(c => c.Appearance.Enabled = on, BuildModePage)), Policies.ColorModeEnabled)
             .Tip(Strings.T("Off: DynaTones leaves the color mode to you and only changes the background.", "Aus: DynaTones überlässt den Farbmodus dir und wechselt nur den Hintergrund."));
         toggle.VerticalAlignment = VerticalAlignment.Center;
-        Speak(toggle, Strings.T("Switch the color mode with the day", "Farbmodus mit dem Tag umschalten"));
+        Ui.Speak(toggle, Strings.T("Switch the color mode with the day", "Farbmodus mit dem Tag umschalten"));
         Grid.SetColumn(toggle, 1);
         head.Children.Add(toggle);
         top.Children.Add(head);
@@ -129,14 +129,14 @@ public partial class MainWindow
             Strings.T("Explorer, Settings and every app that follows the Windows color mode.", "Explorer, Einstellungen und alle Apps, die dem Farbmodus von Windows folgen."));
         apps.Children.Add(Pair(AppWindow(Light(a.Apps, true, Appearance.AppsLight), true), AppWindow(Light(a.Apps, false, Appearance.AppsLight), false)));
         var appsChoice = Ui.Choice(targets, a.Apps, t => ChangeAndRebuild(c => c.Appearance.Apps = t, BuildModePage), 200, targetTips);
-        Speak(appsChoice, Strings.T("Apps", "Apps"));
+        Ui.Speak(appsChoice, Strings.T("Apps", "Apps"));
         apps.Children.Add(Fill(Locked(appsChoice, Policies.AppsColorMode)));
 
         var system = ChangeCard(cards, Strings.T("Taskbar and Start", "Taskleiste und Start"),
             Strings.T("Taskbar, Start, notifications. Some like Windows dark with light apps.", "Taskleiste, Start, Benachrichtigungen. Manche mögen Windows dunkel mit hellen Apps."));
         system.Children.Add(Pair(Taskbar(Light(a.System, true, Appearance.SystemLight), true), Taskbar(Light(a.System, false, Appearance.SystemLight), false)));
         var systemChoice = Ui.Choice(targets, a.System, t => ChangeAndRebuild(c => c.Appearance.System = t, BuildModePage), 200, targetTips);
-        Speak(systemChoice, Strings.T("Taskbar and Start", "Taskleiste und Start"));
+        Ui.Speak(systemChoice, Strings.T("Taskbar and Start", "Taskleiste und Start"));
         system.Children.Add(Fill(Locked(systemChoice, Policies.WindowsColorMode)));
 
         var pointer = ChangeCard(cards, Strings.T("Mouse pointer", "Mauszeiger"),
@@ -148,10 +148,10 @@ public partial class MainWindow
         var choices = new UniformGrid { Columns = 2 };
         var day = Fill(Ui.Choice(schemes, a.CursorLight, v => ChangeAndRebuild(c => c.Appearance.CursorLight = v, BuildModePage), 120));
         day.Margin = new Thickness(0, 0, 4, 0);
-        Speak(day, Strings.T("Pointer by day", "Mauszeiger am Tag"));
+        Ui.Speak(day, Strings.T("Pointer by day", "Mauszeiger am Tag"));
         var night = Fill(Ui.Choice(schemes, a.CursorDark, v => ChangeAndRebuild(c => c.Appearance.CursorDark = v, BuildModePage), 120));
         night.Margin = new Thickness(4, 0, 0, 0);
-        Speak(night, Strings.T("Pointer by night", "Mauszeiger in der Nacht"));
+        Ui.Speak(night, Strings.T("Pointer by night", "Mauszeiger in der Nacht"));
         choices.Children.Add(day);
         choices.Children.Add(night);
         pointer.Children.Add(choices);
@@ -203,7 +203,7 @@ public partial class MainWindow
                 return true;
             }).Tip(Strings.T("0 to 240 minutes. Enter confirms.", "0 bis 240 Minuten. Enter übernimmt."));
             field.Margin = new Thickness(0, 0, 8, 0);
-            Speak(field, Strings.T("Minutes", "Minuten"));
+            Ui.Speak(field, Strings.T("Minutes", "Minuten"));
             row.Children.Add(field);
             row.Children.Add(Word(Strings.T("min.", "Min.")));
             var direction = Ui.Choice(new[] { (true, Strings.T("after", "nach")), (false, Strings.T("before", "vor")) }, after, v =>
@@ -213,7 +213,7 @@ public partial class MainWindow
                 Dispatcher.BeginInvoke(BuildModePage);
             }, 96);
             direction.Margin = new Thickness(0, 0, 8, 0);
-            Speak(direction, Strings.T("after or before", "nach oder vor"));
+            Ui.Speak(direction, Strings.T("after or before", "nach oder vor"));
             row.Children.Add(direction);
             row.Children.Add(Word(light ? Strings.T("sunrise", "Sonnenaufgang") : Strings.T("sunset", "Sonnenuntergang")));
         }
@@ -229,7 +229,7 @@ public partial class MainWindow
                 Dispatcher.BeginInvoke(BuildModePage);
             });
             field.Margin = new Thickness(0, 0, 8, 0);
-            Speak(field, light ? Strings.T("Light from", "Hell ab") : Strings.T("Dark from", "Dunkel ab"));
+            Ui.Speak(field, light ? Strings.T("Light from", "Hell ab") : Strings.T("Dark from", "Dunkel ab"));
             row.Children.Add(field);
             row.Children.Add(Word(Strings.T("o'clock", "Uhr")));
         }

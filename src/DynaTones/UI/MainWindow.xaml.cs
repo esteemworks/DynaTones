@@ -29,7 +29,8 @@ public partial class MainWindow : Window
         TabMode = Frame.AddTab("mode", "");
         TabProfiles = Frame.AddTab("profiles", "");
         Frame.PageChanged += PageChanged;
-        _ = new MiddleScroll(this, ScrollMarker);
+        // Scrolling with the middle mouse button; the kit draws the marker where it started.
+        _ = new MiddleScroll(this);
         dialog = new KitDialog(DialogLayer);
         // The keys are the frame's, as in every family app (kit round C): F5 checks, Ctrl+N opens Add package, Esc
         // closes the settings; pages (KitSubpage) and open lists take Esc first. While a question is open, the keys are its.
@@ -101,14 +102,14 @@ public partial class MainWindow : Window
         AddButtonText.Text = Strings.T("Add package", "Paket hinzufügen");
         PauseText.Text = Strings.T("Pause", "Pausieren");
         ResumeText.Text = Strings.T("Resume", "Fortsetzen");
-        Speak(PauseButton, PauseText.Text);
-        Speak(ResumeButton, ResumeText.Text);
+        Ui.Speak(PauseButton, PauseText.Text);
+        Ui.Speak(ResumeButton, ResumeText.Text);
         TabBackground.Content = Strings.T("Background", "Hintergrund");
         TabMode.Content = Strings.T("Color mode", "Farbmodus");
         TabProfiles.Content = Strings.T("Profiles", "Profile");
         Frame.ApplyTexts();
         // Names for screen readers: icon buttons and buttons made of an icon and a text get none from WPF.
-        Speak(AddButton, AddButtonText.Text);
+        Ui.Speak(AddButton, AddButtonText.Text);
         PauseButton.ToolTip = Strings.T(
             "Stops changing the background and the color mode for a while; what is on screen stays.",
             "Wechselt eine Zeit lang weder Hintergrund noch Farbmodus; was zu sehen ist, bleibt.");
@@ -129,9 +130,6 @@ public partial class MainWindow : Window
     }
 
     // ---------- Header ----------
-
-    /// <summary>The name a screen reader reads for <paramref name="element"/>.</summary>
-    static void Speak(DependencyObject element, string name) => System.Windows.Automation.AutomationProperties.SetName(element, name);
 
     /// <summary>
     /// Check now (kit KitFrame.AddCheck, also F5): settings and location read again, everything put right for this
@@ -366,7 +364,7 @@ public partial class MainWindow : Window
             var add = Ui.Button(Strings.T("Add", "Hinzufügen"), (_, _) => _ = AddFromGalleryAsync(entry))
                 .Tip(Strings.T("Downloads the package and sets it up for the day. The first package becomes the background.",
                     "Lädt das Paket und stellt es auf den Tag ein. Das erste Paket wird der Hintergrund."));
-            Speak(add, Strings.T($"Add {entry.DisplayName}", $"{entry.DisplayName} hinzufügen"));
+            Ui.Speak(add, Strings.T($"Add {entry.DisplayName}", $"{entry.DisplayName} hinzufügen"));
             action = add;
         }
         if (action is FrameworkElement f) f.HorizontalAlignment = HorizontalAlignment.Left;
@@ -505,10 +503,10 @@ public partial class MainWindow : Window
         Ui.Row(card, "\uE80F", Strings.T("City", "Stadt"), Strings.T("Every place with at least 15,000 inhabitants", "Jeder Ort ab 15.000 Einwohnern"), places);
         var lat = Ui.Field(l.Latitude?.ToString("0.####", CultureInfo.InvariantCulture) ?? "", 100, text => SetCoordinate(text, true))
             .Tip(Strings.T("Latitude, -90 to 90. Enter confirms.", "Breite, -90 bis 90. Enter übernimmt."));
-        Speak(lat, Strings.T("Latitude", "Breite"));
+        Ui.Speak(lat, Strings.T("Latitude", "Breite"));
         var lon = Ui.Field(l.Longitude?.ToString("0.####", CultureInfo.InvariantCulture) ?? "", 100, text => SetCoordinate(text, false))
             .Tip(Strings.T("Longitude, -180 to 180. Enter confirms.", "Länge, -180 bis 180. Enter übernimmt."));
-        Speak(lon, Strings.T("Longitude", "Länge"));
+        Ui.Speak(lon, Strings.T("Longitude", "Länge"));
         // Two fields that make one value: one control (design system).
         Ui.Row(card, "\uE909", Strings.T("Latitude and longitude", "Breite und Länge"),
             Strings.T("For any other place, in degrees; south and west are negative", "Für jeden anderen Ort, in Grad; Süd und West sind negativ"),

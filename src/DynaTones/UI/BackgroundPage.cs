@@ -291,7 +291,7 @@ public partial class MainWindow
                     new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", FontSize = 14, VerticalAlignment = VerticalAlignment.Center },
                     new TextBlock { Text = Strings.T("Next image", "Nächstes Bild"), Margin = new Thickness(8, 0, 0, 0) }) };
                 skip.Click += (_, _) => Engine.SkipNext();
-                Speak(skip, Strings.T("Next image", "Nächstes Bild"));
+                Ui.Speak(skip, Strings.T("Next image", "Nächstes Bild"));
                 skip.Tip(Strings.T("Shows the next image of the day now and keeps to it until its own time; then the day goes on as planned.",
                         "Zeigt das nächste Bild des Tages sofort und bleibt dabei bis zu seiner eigenen Zeit; danach geht der Tag wie geplant weiter.") + pausedNote);
                 skip.IsEnabled = plan.Next != null;
@@ -455,7 +455,7 @@ public partial class MainWindow
             Content = grid,
         }.Tip(tip);
         button.Click += (_, _) => open();
-        Speak(button, title);
+        Ui.Speak(button, title);
         return button;
     }
 
@@ -537,7 +537,7 @@ public partial class MainWindow
             button.Background = B("Selected");
         }
         button.Click += (_, _) => OpenPage(BgPage.Package, p.Id);
-        Speak(button, p.DisplayName);
+        Ui.Speak(button, p.DisplayName);
         return button;
     }
 
@@ -557,7 +557,7 @@ public partial class MainWindow
             Content = stack,
         };
         KitMenuButton.Attach(button, FillAddMenu);
-        Speak(button, Strings.T("Add package", "Paket hinzufügen"));
+        Ui.Speak(button, Strings.T("Add package", "Paket hinzufügen"));
         if (!Policies.UsersMayImport) PolicyLock.Apply(button, Policies.AllowUserImport);
         return button;
     }
@@ -637,40 +637,52 @@ public partial class MainWindow
         _ => Strings.T($"flowing over {code} minutes", $"fließend über {code} Minuten"),
     };
 
-    /// <summary>The three transitions as cards to choose from; flowing with its minutes in the card. Each fades.</summary>
-    UniformGrid TransitionCards(int code, Action<int> set)
+    /// <summary>
+    /// The three transitions as the kit's choice cards (Ui.ChoiceCards): one Tab stop, the arrow keys choose. Flowing's
+    /// minutes are the row under the cards while it is chosen, a stop of their own. Each fades.
+    /// </summary>
+    ChoiceCardGroup TransitionCards(int code, Action<int> set)
     {
-        var grid = new UniformGrid { Columns = 3 };
+        const int Flowing = int.MinValue;
         var flowing = code > 0 ? code : 30;
-        (int Code, string Title, string Help)[] options =
-        [
-            (0, Strings.T("Soft", "Weich"), Strings.T("about 1 second", "etwa 1 Sekunde")),
-            (Transitions.Gentle, Strings.T("Gentle", "Sanft"), Strings.T("a few seconds", "einige Sekunden")),
-            (flowing, Strings.T("Flowing", "Fließend"), ""),
-        ];
-        for (var i = 0; i < options.Length; i++)
+        var items = new[]
         {
-            var (value, title, help) = options[i];
-            var last = i == options.Length - 1;
-            var selected = last ? code > 0 : code == value;
-            var stack = new StackPanel();
-            var radio = new RadioButton { Content = title, IsChecked = selected, GroupName = "transition-" + GetHashCode(), FontWeight = FontWeights.SemiBold };
-            var chosen = value;
-            radio.Checked += (_, _) => { if (!selected) set(chosen); };
-            stack.Children.Add(radio);
-            if (!last) stack.Children.Add(new TextBlock { Style = S("Muted"), Text = help, Margin = new Thickness(28, 4, 0, 0) });
-            else
-            {
-                var minutes = Ui.Choice(new[] { (10, Strings.T("10 minutes", "10 Minuten")), (30, Strings.T("30 minutes", "30 Minuten")), (60, Strings.T("60 minutes", "60 Minuten")) },
-                    flowing is 10 or 30 or 60 ? flowing : 30, m => set(m), 130);
-                Speak(minutes, Strings.T("Flowing over", "Fließend über"));
-                stack.Children.Add(Ui.Horizontal(new TextBlock { Style = S("Muted"), Text = Strings.T("over", "über"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(28, 0, 8, 0) }, minutes));
-                ((FrameworkElement)stack.Children[^1]).Margin = new Thickness(0, 4, 0, 0);
-            }
-            grid.Children.Add(ChoiceCard(stack, selected,
-                i == 0 ? new Thickness(0, 0, 4, 0) : last ? new Thickness(4, 0, 0, 0) : new Thickness(4, 0, 4, 0)));
+            new ChoiceCardItem<int>(0, Strings.T("Soft", "Weich"), Detail: Strings.T("about 1 second", "etwa 1 Sekunde")),
+            new ChoiceCardItem<int>(Transitions.Gentle, Strings.T("Gentle", "Sanft"), Detail: Strings.T("a few seconds", "einige Sekunden")),
+            new ChoiceCardItem<int>(Flowing, Strings.T("Flowing", "Fließend"), Detail: Strings.T("over 10, 30 or 60 minutes", "über 10, 30 oder 60 Minuten")),
+        };
+        return Ui.ChoiceCards(items, code > 0 ? Flowing : code, v => ChooseKeepingFocus("transition", () => set(v == Flowing ? flowing : v)), columns: 3,
+            detailFor: v => v == Flowing ? FlowingRow() : null, groupName: "transition");
+
+        FrameworkElement FlowingRow()
+        {
+            var minutes = Ui.Choice(new[] { (10, Strings.T("10 minutes", "10 Minuten")), (30, Strings.T("30 minutes", "30 Minuten")), (60, Strings.T("60 minutes", "60 Minuten")) },
+                flowing is 10 or 30 or 60 ? flowing : 30, m => set(m), 130);
+            Ui.Speak(minutes, Strings.T("Flowing over", "Fließend über"));
+            return Ui.Horizontal(new TextBlock { Style = S("Muted"), Text = Strings.T("Flowing over", "Fließend über"), VerticalAlignment = VerticalAlignment.Center }, Ui.Spacer(), minutes);
         }
-        return grid;
+    }
+
+    /// <summary>
+    /// A choice among the kit's choice cards: the page is built anew after it, and when the choice was made with the
+    /// keyboard the focus goes back to the chosen card of the same group.
+    /// </summary>
+    void ChooseKeepingFocus(string group, Action choose)
+    {
+        var byKeyboard = System.Windows.Input.Keyboard.FocusedElement is RadioButton { GroupName: var name } && name == group;
+        choose();
+        if (byKeyboard) Dispatcher.BeginInvoke(() => FindChosen(this, group)?.Focus(), System.Windows.Threading.DispatcherPriority.Input);
+
+        static RadioButton? FindChosen(DependencyObject parent, string group)
+        {
+            for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is RadioButton { IsChecked: true, IsVisible: true } radio && radio.GroupName == group) return radio;
+                if (FindChosen(child, group) is { } found) return found;
+            }
+            return null;
+        }
     }
 
     /// <summary>The pictures of a package in the order of the day, with today's time of each.</summary>
@@ -718,7 +730,7 @@ public partial class MainWindow
                 Content = stack,
             };
             button.Click += (_, _) => OpenPage(BgPage.Image, p.Id, index);
-            Speak(button, PictureName(image));
+            Ui.Speak(button, PictureName(image));
             grid.Children.Add(button);
         }
         return grid;
@@ -761,30 +773,37 @@ public partial class MainWindow
 
         var fixedByPolicy = KitPolicy.IsFixed(Policies.LockScreenEnabled);
         var card = Ui.Card(Target, Strings.T("What the lock screen shows", "Was der Sperrbildschirm zeigt"));
-        var choices = new UniformGrid { Columns = 3, Margin = new Thickness(0, 4, 0, 8) };
         var desktopPath = Engine.Package is { } dp && Engine.Plan?.Current is { } dc ? dp.PathOf(dp.Images[dc.Image]) : null;
-        choices.Children.Add(LockChoice(desktopPath, Strings.T("Like the desktop", "Wie der Desktop"),
-            Strings.T("The same pictures at the same moments.", "Dieselben Bilder zur selben Zeit."),
-            l.Enabled && l.Source == LockScreenSource.Wallpaper, () => SetLock(LockScreenSource.Wallpaper, null), null, fixedByPolicy, new Thickness(0, 0, 8, 0)));
-
         var packages = Packages.LoadAll().Where(p => !removing.Contains(p.Id)).ToList();
         var own = packages.FirstOrDefault(p => p.Id == l.PackageId) ?? packages.FirstOrDefault();
         var ownPath = l.Enabled && l.Source == LockScreenSource.Package && Engine.Plan?.LockPackage is { } lp && Engine.Plan.LockCurrent is { } lc
             ? lp.PathOf(lp.Images[lc.Image]) : own != null && own.Images.Count > 0 ? own.PathOf(own.Images[0]) : null;
-        FrameworkElement? picker = null;
-        if (packages.Count > 0)
-            picker = Ui.Choice(packages.Select(p => ((string?)p.Id, p.DisplayName)), own?.Id,
-                id => SetLock(LockScreenSource.Package, id), 220);
-        choices.Children.Add(LockChoice(ownPath, Strings.T("A package of its own", "Eigenes Paket"),
-            Strings.T("Runs through the day by its own times.", "Läuft nach seinen eigenen Zeiten durch den Tag."),
-            l.Enabled && l.Source == LockScreenSource.Package, () => SetLock(LockScreenSource.Package, own?.Id), picker, fixedByPolicy || packages.Count == 0, new Thickness(4, 0, 4, 0)));
-
-        var link = new TextBlock { Style = S("Muted"), TextWrapping = TextWrapping.Wrap };
-        link.Inlines.Add(Strings.T("DynaTones leaves it alone. ", "DynaTones lässt ihn in Ruhe. "));
-        var hyperlink = new Hyperlink(new Run(Strings.T("Set it in Windows", "In Windows einstellen")));
-        hyperlink.Click += (_, _) => Process.Start(new ProcessStartInfo("ms-settings:lockscreen") { UseShellExecute = true });
-        link.Inlines.Add(hyperlink);
-        choices.Children.Add(LockChoice(null, Strings.T("Like Windows", "Wie Windows"), null, !l.Enabled, () => SetLock(null, null), link, fixedByPolicy, new Thickness(8, 0, 0, 0)));
+        // The kit's choice cards: what belongs to the chosen one (the package, the way to Windows' setting) is the row under them.
+        var lockItems = new[]
+        {
+            new ChoiceCardItem<string>("desktop", Strings.T("Like the desktop", "Wie der Desktop"), LockPicture(desktopPath),
+                Detail: Strings.T("The same pictures at the same moments.", "Dieselben Bilder zur selben Zeit.")),
+            new ChoiceCardItem<string>("package", Strings.T("A package of its own", "Eigenes Paket"), LockPicture(ownPath),
+                Detail: Strings.T("Runs through the day by its own times.", "Läuft nach seinen eigenen Zeiten durch den Tag.")),
+            new ChoiceCardItem<string>("windows", Strings.T("Like Windows", "Wie Windows"), LockPicture(null),
+                Detail: Strings.T("DynaTones leaves it alone.", "DynaTones lässt ihn in Ruhe.")),
+        };
+        var lockNow = !l.Enabled ? "windows" : l.Source == LockScreenSource.Package ? "package" : "desktop";
+        var choices = Ui.ChoiceCards(lockItems, lockNow, key => ChooseKeepingFocus("lock", () =>
+        {
+            if (key == "desktop") SetLock(LockScreenSource.Wallpaper, null);
+            else if (key == "package") SetLock(LockScreenSource.Package, own?.Id);
+            else SetLock(null, null);
+        }), columns: 3, detailFor: key => key switch
+        {
+            "package" when packages.Count > 0 => Ui.Horizontal(new TextBlock { Style = S("Muted"), Text = Strings.T("Package", "Paket"), VerticalAlignment = VerticalAlignment.Center }, Ui.Spacer(),
+                Ui.Speak(Ui.Choice(packages.Select(p => ((string?)p.Id, p.DisplayName)), own?.Id, id => SetLock(LockScreenSource.Package, id), 220), Strings.T("Package for the lock screen", "Paket für den Sperrbildschirm"))),
+            "windows" => WindowsLink(),
+            _ => null,
+        }, groupName: "lock");
+        choices.Margin = new Thickness(0, 4, 0, 8);
+        if (fixedByPolicy) choices.IsEnabled = false;
+        else if (packages.Count == 0) choices.Cards.Children[1].IsEnabled = false;
         card.Children.Add(choices);
         if (fixedByPolicy) Ui.Note(card, KitPolicy.LockedText);
 
@@ -821,33 +840,23 @@ public partial class MainWindow
             signIn, showHelp: !signInReady || outdated || (l.SignIn && SignIn.NotShownYet()));
     }
 
-    UIElement LockChoice(string? path, string title, string? help, bool selected, Action choose, FrameworkElement? extra, bool locked, Thickness margin)
+    /// <summary>A lock screen choice's picture; Windows' own when DynaTones leaves it alone.</summary>
+    FrameworkElement LockPicture(string? path)
     {
-        var stack = new StackPanel();
         var picture = Picture(path, double.NaN, 110, 320);
         picture.CornerRadius = new CornerRadius(6);
         if (path == null) picture.Child = new TextBlock { Style = S("Muted"), Text = Strings.T("Picture from Windows", "Bild aus Windows"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        stack.Children.Add(picture);
-        var radio = new RadioButton { Content = title, IsChecked = selected, GroupName = "lock", Margin = new Thickness(0, 8, 0, 4), FontWeight = FontWeights.SemiBold, IsEnabled = !locked };
-        radio.Checked += (_, _) =>
-        {
-            if (!selected) choose();
-        };
-        stack.Children.Add(radio);
-        if (help != null) stack.Children.Add(new TextBlock { Style = S("Muted"), Text = help, TextWrapping = TextWrapping.Wrap });
-        if (extra != null)
-        {
-            // Full width under the text, aligned with it.
-            extra.Margin = new Thickness(0, 8, 0, 0);
-            extra.IsEnabled = !locked;
-            if (extra is ComboBox)
-            {
-                extra.Width = double.NaN;
-                extra.HorizontalAlignment = HorizontalAlignment.Stretch;
-            }
-            stack.Children.Add(extra);
-        }
-        return ChoiceCard(stack, selected, margin);
+        return picture;
+    }
+
+    /// <summary>The way to Windows' own lock screen setting, under the cards while "Like Windows" is chosen.</summary>
+    static FrameworkElement WindowsLink()
+    {
+        var link = new TextBlock { TextWrapping = TextWrapping.Wrap };
+        var hyperlink = new Hyperlink(new Run(Strings.T("Set it in Windows", "In Windows einstellen")));
+        hyperlink.Click += (_, _) => Process.Start(new ProcessStartInfo("ms-settings:lockscreen") { UseShellExecute = true });
+        link.Inlines.Add(hyperlink);
+        return link;
     }
 
     /// <summary>
@@ -911,9 +920,6 @@ public partial class MainWindow
                 $"DynaTones setzt es: {KindName(s.Kind)}, bei {Strings.Degrees(s.Elevation)} mit {(s.Rising ? "steigender" : "fallender")} Sonne.")
               + (string.IsNullOrEmpty(s.ReasonShown) ? "" : " " + char.ToUpper(s.ReasonShown[0], Strings.Culture) + s.ReasonShown[1..] + ".")
             : Strings.T("DynaTones places it by what it found out about the picture.", "DynaTones setzt es nach dem, was es über das Bild herausgefunden hat.");
-        right.Children.Add(AnchorChoice(Strings.T("Automatic", "Automatisch"), new TextBlock { Style = S("Muted"), Text = autoText, TextWrapping = TextWrapping.Wrap },
-            a.Mode == AnchorMode.Auto, () => SetAnchor(p, image, x => x.Mode = AnchorMode.Auto)));
-
         var elevation = Ui.Field(a.Mode == AnchorMode.Sun ? a.Elevation.ToString("0.#", Strings.Culture) : (image.Suggested?.Elevation ?? 0).ToString("0.#", Strings.Culture), 56, text =>
         {
             if (!double.TryParse(text.Replace("°", ""), NumberStyles.Float, Strings.Culture, out var v) || v < -60 || v > 90) return false;
@@ -925,7 +931,7 @@ public partial class MainWindow
             return true;
         }).Tip(Strings.T("Degrees above the horizon: 0 is the horizon, 6 a low sun, -6 dusk, -12 nearly dark. Enter confirms.",
             "Grad über dem Horizont: 0 ist der Horizont, 6 tiefe Sonne, -6 Dämmerung, -12 fast dunkel. Enter übernimmt."));
-        Speak(elevation, Strings.T("Sun's elevation in degrees", "Sonnenhöhe in Grad"));
+        Ui.Speak(elevation, Strings.T("Sun's elevation in degrees", "Sonnenhöhe in Grad"));
         var rising = a.Mode == AnchorMode.Sun ? a.Rising : image.Suggested?.Rising ?? true;
         var side = Ui.Choice(new[] { (true, Strings.T("in the morning", "am Vormittag")), (false, Strings.T("in the afternoon", "am Nachmittag")) }, rising,
             r => SetAnchor(p, image, x =>
@@ -939,16 +945,6 @@ public partial class MainWindow
                 Ui.Spacer(), elevation, Ui.Spacer(),
                 new TextBlock { Style = S("Muted"), Text = Strings.T("degrees high,", "Grad hoch steht,"), VerticalAlignment = VerticalAlignment.Center },
                 Ui.Spacer(), side);
-        var sunBlock = new StackPanel();
-        sunBlock.Children.Add(sunLine);
-        sunBlock.Children.Add(new TextBlock { Style = S("Muted"), Text = Strings.T("Moves with the seasons.", "Wandert mit den Jahreszeiten."), Margin = new Thickness(0, 6, 0, 0) });
-        right.Children.Add(AnchorChoice(Strings.T("With the sun", "Mit der Sonne"), sunBlock,
-            a.Mode == AnchorMode.Sun, () => SetAnchor(p, image, x =>
-            {
-                x.Mode = AnchorMode.Sun;
-                x.Elevation = image.Suggested?.Elevation ?? 0;
-                x.Rising = image.Suggested?.Rising ?? true;
-            })));
 
         var time = Ui.Field(a.Time ?? "12:00", 64, text =>
         {
@@ -960,51 +956,42 @@ public partial class MainWindow
             });
             return true;
         }).Tip(Strings.T("A clock time like 7:30 or 19:45. Enter confirms.", "Eine Uhrzeit wie 7:30 oder 19:45. Enter übernimmt."));
-        Speak(time, Strings.T("Clock time", "Uhrzeit"));
-        right.Children.Add(AnchorChoice(Strings.T("At a clock time", "Zu einer Uhrzeit"), Ui.Horizontal(
-                new TextBlock { Style = S("Muted"), Text = Strings.T("Every day from", "Jeden Tag ab"), VerticalAlignment = VerticalAlignment.Center }, Ui.Spacer(), time, Ui.Spacer(),
-                new TextBlock { Style = S("Muted"), Text = Strings.T("o'clock", "Uhr"), VerticalAlignment = VerticalAlignment.Center }),
-            a.Mode == AnchorMode.Time, () => SetAnchor(p, image, x =>
-            {
-                x.Mode = AnchorMode.Time;
-                x.Time ??= "12:00";
-            })));
-        right.Children.Add(AnchorChoice(Strings.T("Do not show this picture", "Dieses Bild nicht zeigen"), null,
-            a.Mode == AnchorMode.Off, () => SetAnchor(p, image, x => x.Mode = AnchorMode.Off)));
-    }
-
-    UIElement AnchorChoice(string title, UIElement? body, bool selected, Action choose)
-    {
-        var stack = new StackPanel();
-        var radio = new RadioButton { Content = title, IsChecked = selected, GroupName = "anchor", FontWeight = FontWeights.SemiBold };
-        radio.Checked += (_, _) =>
+        Ui.Speak(time, Strings.T("Clock time", "Uhrzeit"));
+        var timeLine = Ui.Horizontal(
+            new TextBlock { Style = S("Muted"), Text = Strings.T("Every day from", "Jeden Tag ab"), VerticalAlignment = VerticalAlignment.Center }, Ui.Spacer(), time, Ui.Spacer(),
+            new TextBlock { Style = S("Muted"), Text = Strings.T("o'clock", "Uhr"), VerticalAlignment = VerticalAlignment.Center });
+        // The kit's choice cards, one below the other (Up and Down choose); the fields of the chosen one are the row under them.
+        var anchors = new[]
         {
-            if (!selected) choose();
+            new ChoiceCardItem<AnchorMode>(AnchorMode.Auto, Strings.T("Automatic", "Automatisch"), Detail: autoText),
+            new ChoiceCardItem<AnchorMode>(AnchorMode.Sun, Strings.T("With the sun", "Mit der Sonne"), Detail: Strings.T("Moves with the seasons.", "Wandert mit den Jahreszeiten.")),
+            new ChoiceCardItem<AnchorMode>(AnchorMode.Time, Strings.T("At a clock time", "Zu einer Uhrzeit"), Detail: Strings.T("Every day at the same time.", "Jeden Tag zur selben Zeit.")),
+            new ChoiceCardItem<AnchorMode>(AnchorMode.Off, Strings.T("Do not show this picture", "Dieses Bild nicht zeigen")),
         };
-        stack.Children.Add(radio);
-        if (body is FrameworkElement f)
+        right.Children.Add(Ui.ChoiceCards(anchors, a.Mode, mode => ChooseKeepingFocus("anchor", () => SetAnchor(p, image, x =>
         {
-            f.Margin = new Thickness(28, 4, 0, 0);
-            stack.Children.Add(f);
-        }
-        return ChoiceCard(stack, selected, new Thickness(0, 0, 0, 8));
+            switch (mode)
+            {
+                case AnchorMode.Sun:
+                    x.Mode = AnchorMode.Sun;
+                    x.Elevation = image.Suggested?.Elevation ?? 0;
+                    x.Rising = image.Suggested?.Rising ?? true;
+                    break;
+                case AnchorMode.Time:
+                    x.Mode = AnchorMode.Time;
+                    x.Time ??= "12:00";
+                    break;
+                default:
+                    x.Mode = mode;
+                    break;
+            }
+        })), columns: 1, detailFor: mode => mode switch
+        {
+            AnchorMode.Sun => sunLine,
+            AnchorMode.Time => timeLine,
+            _ => null,
+        }, groupName: "anchor"));
     }
-
-    /// <summary>
-    /// A choice among large choices with a picture or more than a line (transition, lock screen, anchor, the pictures of
-    /// the introduction): as the kit's RadioCard, the chosen one takes Selected with a 1 px SelectedLine, so nothing
-    /// jumps when the choice moves and the accent stays for the radio button itself.
-    /// </summary>
-    Border ChoiceCard(UIElement child, bool selected, Thickness margin) => new()
-    {
-        Padding = new Thickness(12),
-        Margin = margin,
-        CornerRadius = new CornerRadius(8),
-        BorderThickness = new Thickness(1),
-        BorderBrush = selected ? B("SelectedLine") : B("Line"),
-        Background = selected ? B("Selected") : B("Surface"),
-        Child = child,
-    };
 
     /// <summary>When the picture shows today, and in June and December, so moving it with the sun is easy to judge.</summary>
     string Hours(Package p, int index)
@@ -1182,7 +1169,7 @@ public partial class MainWindow
             new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = toDark ? "" : "", FontSize = 13, VerticalAlignment = VerticalAlignment.Center },
             new TextBlock { Text = TrayHost.SwitchText(plan), Margin = new Thickness(8, 0, 0, 0) });
         var button = new Button { Style = S("QuietButton"), Content = content };
-        Speak(button, TrayHost.SwitchText(plan));
+        Ui.Speak(button, TrayHost.SwitchText(plan));
         if (plan.Dark == null)
         {
             button.Click += (_, _) => Engine.SwitchMode();
@@ -1245,7 +1232,7 @@ public partial class MainWindow
     static void SetDateHint(DatePicker picker)
     {
         if (picker.Template?.FindName("PART_TextBox", picker) is not DatePickerTextBox box) return;
-        Speak(box, Strings.T("Preview a date", "Datum ansehen"));
+        Ui.Speak(box, Strings.T("Preview a date", "Datum ansehen"));
         var property = typeof(DatePickerTextBox).GetField("WatermarkProperty",
             System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)?.GetValue(null) as DependencyProperty;
         if (property != null) box.SetValue(property, Strings.T("Pick a date", "Datum auswählen"));

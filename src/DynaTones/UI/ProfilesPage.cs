@@ -194,8 +194,8 @@ public partial class MainWindow
         var pointer = own.Pointer;
         var day = Ui.Choice(schemes, pointer != null ? pointer.Light : settings.Appearance.CursorLight, v => Set(p => p.Pointer = new ProfilePointer { Light = v, Dark = p.Pointer?.Dark ?? settings.Appearance.CursorDark }), 140);
         var night = Ui.Choice(schemes, pointer != null ? pointer.Dark : settings.Appearance.CursorDark, v => Set(p => p.Pointer = new ProfilePointer { Light = p.Pointer?.Light ?? settings.Appearance.CursorLight, Dark = v }), 140);
-        Speak(day, Strings.T("Pointer by day", "Mauszeiger am Tag"));
-        Speak(night, Strings.T("Pointer by night", "Mauszeiger in der Nacht"));
+        Ui.Speak(day, Strings.T("Pointer by day", "Mauszeiger am Tag"));
+        Ui.Speak(night, Strings.T("Pointer by night", "Mauszeiger in der Nacht"));
         grid.Children.Add(ProfileSetting(Strings.T("Mouse pointer", "Mauszeiger"), own.Pointer != null, () => Set(p => p.Pointer = null), Ui.Horizontal(day, Ui.Spacer(6), night)));
     }
 
@@ -215,7 +215,7 @@ public partial class MainWindow
             var back = new Button { Style = S("IconButton"), Width = 26, Height = 26, Margin = new Thickness(6, 0, 0, 0),
                 Content = new TextBlock { FontFamily = (FontFamily)FindResource("IconFont"), Text = "", FontSize = 12 } };
             back.ToolTip = Strings.T("Back to the value taken over from Background and Color mode", "Zurück zum übernommenen Wert aus Hintergrund und Farbmodus");
-            Speak(back, Strings.T($"Reset {label}", $"{label} zurücksetzen"));
+            Ui.Speak(back, Strings.T($"Reset {label}", $"{label} zurücksetzen"));
             back.Click += (_, _) => reset();
             name.Children.Add(back);
         }
