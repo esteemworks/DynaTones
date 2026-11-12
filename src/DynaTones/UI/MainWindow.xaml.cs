@@ -29,13 +29,13 @@ public partial class MainWindow : Window
         TabMode = Frame.AddTab("mode", "");
         TabProfiles = Frame.AddTab("profiles", "");
         Frame.PageChanged += PageChanged;
+        _ = new MiddleScroll(this, ScrollMarker);
+        dialog = new KitDialog(DialogLayer);
         // The keys are the frame's, as in every family app (kit round C): F5 updates, Ctrl+N opens Add package, Esc
         // closes the settings; pages (KitSubpage) and open lists take Esc first. While a question is open, the keys are its.
         Frame.Refresh = () => Refresh_Click(this, new RoutedEventArgs());
         Frame.New = () => KitMenuButton.Toggle(AddButton, fromKeyboard: true, last: false);
         Frame.KeysBlocked = () => dialog.IsOpen;
-        _ = new MiddleScroll(this, ScrollMarker);
-        dialog = new KitDialog(DialogLayer);
         // A package waiting for Undo is really deleted when the window goes.
         Closed += (_, _) => dialog.Flush();
         ApplyTexts();
