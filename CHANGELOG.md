@@ -4,6 +4,9 @@ All notable changes to DynaTones. Downloads will be on the [releases page](../..
 
 ## 0.6.1
 
+- **Typing a city works again.** Under Enter a place (in the introduction and in the settings), the City field took
+  the first place that began with the letters typed so far, so "Hamburg" became "Ha Tsuen" or "H Street NE". A place is
+  now taken with Enter, a pick from the list or leaving the field; Esc gives back the place in use
 - Screen readers: a choice field that took the place of a row of segments (such as the color mode of this window
   in Settings, General) is read with its row's name and the line below it
 

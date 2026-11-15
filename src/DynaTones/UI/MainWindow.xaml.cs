@@ -491,15 +491,36 @@ public partial class MainWindow : Window
         places.ItemsSource = SortedTowns ??= Locator.Towns.OrderBy(z => z.Name, StringComparer.CurrentCultureIgnoreCase).ThenByDescending(z => z.People).ToList();
         // Coordinates typed in: the place they are in or near, so the field never stands empty.
         places.Text = l.PlaceName ?? (l.Latitude is { } la && l.Longitude is { } lo ? Locator.Near(la, lo, 25)?.Label : null) ?? "";
-        places.SelectionChanged += (_, _) =>
+        // Taken only when the choice is made: Enter, a pick from the list, or leaving the field. While typing, the text
+        // search jumps to the first place that begins with the letters so far ("Ha" is Ha Tsuen before "Hamburg" is
+        // complete); taking that at once built the page anew under the typing (found by the tutorial session, 15.11.2026).
+        var taken = places.Text;
+        void Take()
         {
-            if (places.SelectedItem is Locator.Town p)
-                ChangeAndRebuild(c =>
-                {
-                    c.Location.Latitude = p.Latitude;
-                    c.Location.Longitude = p.Longitude;
-                    c.Location.PlaceName = p.Label;
-                }, BuildSettingsPage);
+            if (places.SelectedItem is not Locator.Town p || p.Label != places.Text || p.Label == taken) return;
+            taken = p.Label;
+            ChangeAndRebuild(c =>
+            {
+                c.Location.Latitude = p.Latitude;
+                c.Location.Longitude = p.Longitude;
+                c.Location.PlaceName = p.Label;
+            }, BuildSettingsPage);
+        }
+        places.PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == System.Windows.Input.Key.Enter) Take();
+            // Esc while typing: back to the place in use.
+            else if (e.Key == System.Windows.Input.Key.Escape && !places.IsDropDownOpen && places.Text != taken)
+            {
+                places.Text = taken;
+                e.Handled = true;
+            }
+        };
+        places.DropDownClosed += (_, _) => Take();
+        places.LostKeyboardFocus += (_, e) =>
+        {
+            if (e.NewFocus is DependencyObject next && places.IsAncestorOf(next)) return;
+            Take();
         };
         Ui.Row(card, "\uE80F", Strings.T("City", "Stadt"), Strings.T("Every place with at least 15,000 inhabitants", "Jeder Ort ab 15.000 Einwohnern"), places);
         var lat = Ui.Field(l.Latitude?.ToString("0.####", CultureInfo.InvariantCulture) ?? "", 100, text => SetCoordinate(text, true))
