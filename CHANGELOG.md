@@ -2,7 +2,7 @@
 
 All notable changes to DynaTones. Downloads will be on the [releases page](../../releases) from the first release on.
 
-## Not released yet
+## 0.6.0
 
 - **The window no longer stays white after opening it from the tray.** Windows' text services (for typing, input
   methods and dictation) were loaded the first time the window took the keyboard focus. If helpers such as the touch
