@@ -2,6 +2,11 @@
 
 All notable changes to DynaTones. Downloads will be on the [releases page](../../releases) from the first release on.
 
+## 0.6.1
+
+- Screen readers: a choice field that took the place of a row of segments (such as the color mode of this window
+  in Settings, General) is read with its row's name and the line below it
+
 ## 0.6.0
 
 - **The window no longer stays white after opening it from the tray.** Windows' text services (for typing, input
