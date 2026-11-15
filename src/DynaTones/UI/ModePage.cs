@@ -48,15 +48,16 @@ public partial class MainWindow
         title.VerticalAlignment = VerticalAlignment.Center;
         head.Children.Add(title);
         // One control per row (design system, "Settings pages"): the switch in the title's row, how it switches below.
-        Border? how = null;
+        FrameworkElement? how = null;
         if (a.Enabled)
         {
-            var trigger = Ui.Segments(new[]
+            // Three ways: a choice field, segments are for two (design system 32).
+            var trigger = Ui.Choice(new[]
             {
                 (AppearanceTrigger.Sun, Strings.T("By the sun", "Nach der Sonne")),
                 (AppearanceTrigger.Times, Strings.T("At set times", "Zu Uhrzeiten")),
                 (AppearanceTrigger.Image, Strings.T("Like the picture", "Wie das Bild")),
-            }, a.Trigger, t => ChangeAndRebuild(c => c.Appearance.Trigger = t, BuildModePage), [
+            }, a.Trigger, t => ChangeAndRebuild(c => c.Appearance.Trigger = t, BuildModePage), 220, [
                 Strings.T("Light from sunrise to sunset at your location, each with an offset", "Hell von Sonnenauf- bis -untergang an deinem Standort, jeweils mit Versatz"),
                 Strings.T("At two fixed clock times every day", "Zu zwei festen Uhrzeiten an jedem Tag"),
                 Strings.T("Dark while the picture shown belongs below the horizon: always goes with the background", "Dunkel, solange das gezeigte Bild unter den Horizont gehört: passt immer zum Hintergrund"),
@@ -462,7 +463,7 @@ sealed class ModeBand : FrameworkElement
         // The light span, named in its middle.
         if (l is { } a && d is { } b && b > a)
         {
-            var span = Label(Strings.T($"light, {Strings.Time(a)} to {Strings.Time(b)}", $"hell, {Strings.Time(a)} bis {Strings.Time(b)}"), TypeSize("TextSmall"), Theme.Brush("DayInk"), true);
+            var span = Label(Strings.T($"light, {Strings.Time(a)} to {Strings.Time(b)}", $"hell, {Strings.Time(a)} bis {Strings.Time(b)}"), TypeSize("TextSmall"), Theme.Brush("DayBarInk"), true);
             if (X(b) - X(a) > span.Width + 24) dc.DrawText(span, new Point((X(a) + X(b) - span.Width) / 2, BandTop + (BandHeight - span.Height) / 2));
         }
 

@@ -4,6 +4,23 @@ All notable changes to DynaTones. Downloads will be on the [releases page](../..
 
 ## Not released yet
 
+- **The window no longer stays white after opening it from the tray.** Windows' text services (for typing, input
+  methods and dictation) were loaded the first time the window took the keyboard focus. If helpers such as the touch
+  keyboard's asked the window about itself at that moment, which happens on every change of focus, DynaTones answered
+  them while still waiting for the text services, and could keep itself busy so that the window stayed white. They are
+  now loaded when DynaTones starts, before any window can take the focus (a few milliseconds)
+- **The mouse's back and forward buttons** move through the pages: back works like Back or Esc on a page under
+  Background, in the gallery, the profile editor and the settings, and closes the settings on their first page;
+  forward returns to the page left by going back
+- **Settings, Accessibility:** high contrast in light and dark (Windows' own contrast theme comes first), reduce
+  motion, always show the focus ring, explanations shown in the open, tooltips that stay. Kept with the other
+  settings and their backups
+- Where the sun is calculated (Windows location, Enter a place, Time zone only), how the color mode switches (By
+  the sun, At set times, Like the picture), the color mode of this window and the kind of a profile's pause are
+  choice fields now: a row of segments is for two choices only
+- A switch on a page of the settings, such as High contrast, keeps that page open, with its scrolling and the focus
+- In dark mode the words on the light band under Color mode ("light, 08:06 to 15:45") were light on light; they are
+  dark again, in every mode
 - **Colors and sizes by the family's names.** The light and dark bands under Color mode and the day graph use the
   family's colors for day and night, the same everywhere; the "Light from" and "Dark from" fields their tints. In
   light mode the day's ink is a little darker, so it reads well on its tint. Text sizes and corners come from the

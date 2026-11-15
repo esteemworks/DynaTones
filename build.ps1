@@ -15,11 +15,15 @@ param(
     [switch]$Setup,
     # Builds the app with the compiled kit from kit\ even with the kit's sources next to this repository, as anyone
     # who clones the public repository does. For releases.
-    [switch]$KitPackage
+    [switch]$KitPackage,
+    # A build for a release. Every other build shows its commit and build time under Updates, since it keeps the
+    # version number of the last release (EsteemWorks.Kit, KitApp.VersionText). Releases also take -KitPackage.
+    [switch]$Release
 )
 if ($Setup) { $SelfContained = $true }
 # An empty kit source is a global property, so the project cannot set it back: it takes the package from kit\.
 $kitProperty = @(if ($KitPackage) { '-p:EsteemWorksKitSource=' })
+if ($Release) { $kitProperty += '-p:EsteemWorksRelease=true'; Write-Host 'Release build' }
 
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot

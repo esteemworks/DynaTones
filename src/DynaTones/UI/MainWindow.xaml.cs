@@ -431,12 +431,13 @@ public partial class MainWindow : Window
         var card = Ui.Section(parent, Strings.T("Location", "Standort"));
         // Windows' location strictly, an older choice, shows as the Windows location: the time zone is its fallback anyway.
         var shownMode = l.Mode == LocationMode.Windows ? LocationMode.Auto : l.Mode;
-        var source = Locked(Ui.Segments(new[]
+        // Three ways: a choice field, segments are for two (design system 32).
+        var source = Locked(Ui.Choice(new[]
         {
             (LocationMode.Auto, Strings.T("Windows location", "Windows-Standort")),
             (LocationMode.Coordinates, Strings.T("Enter a place", "Ort eingeben")),
             (LocationMode.TimeZone, Strings.T("Time zone only", "Nur Zeitzone")),
-        }, shownMode, SetLocationMode, [
+        }, shownMode, SetLocationMode, 220, [
             Strings.T("Where Windows says the device is; if Windows does not answer, a place entered before, then the time zone",
                 "Wo Windows das Gerät sieht; antwortet Windows nicht, ein früher eingegebener Ort, dann die Zeitzone"),
             Strings.T("A city or coordinates you enter", "Eine Stadt oder Koordinaten, die du eingibst"),
