@@ -35,10 +35,10 @@ Windows location is switched off, and it puts the wallpaper back when something 
 
 ## See it in action
 
-**[Watch the film](https://esteemworks.github.io/dynatones/)** (1:44, plays in your browser, sound on): outside the window
-the sun goes down, on the screen it is still noon. Then DynaTones: screen and window follow the same sun through a day,
-the slow blend from night to the blue hour, dark mode with the sunset, your own photos, the lock screen, a city where
-location is off, and templates for IT.
+**[Watch the hands-on tutorial](https://esteemworks.github.io/dynatones/#tutorial)** (5:40, plays in your browser, with
+chapters and subtitles): DynaTones 0.6.1 on a fresh Windows 11, from the setup to your own photos as a package. The day
+and its pictures, the transitions, the lock screen, dark mode by the sun, packages from the gallery and from a folder,
+and profiles shared with StartQueue.
 
 ## Highlights
 

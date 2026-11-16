@@ -140,7 +140,7 @@ For tools that cannot write the registry: `%ProgramData%\EsteemWorks\DynaTones\p
 
 ```json
 {
-  "fixed": { "WallpaperEnabled": true, "ManagedPackageFolder": "%ProgramData%\\Contoso\\Wallpapers" },
+  "fixed": { "WallpaperEnabled": true, "ManagedPackageFolder": "%ProgramData%\\YourCompany\\Wallpapers" },
   "recommended": { "AppsColorMode": "switch", "LockScreenEnabled": false }
 }
 ```
